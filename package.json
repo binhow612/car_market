@@ -1,0 +1,30 @@
+{
+  "name": "carmarket",
+  "version": "1.0.0",
+  "description": "Used Cars Marketplace Platform",
+  "private": true,
+  "workspaces": [
+    "packages/client",
+    "packages/server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "npm run dev --workspace=packages/client",
+    "server": "npm run start:dev --workspace=packages/server",
+    "build": "npm run build --workspace=packages/client && npm run build --workspace=packages/server",
+    "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "carmarket",
+    "marketplace",
+    "react",
+    "nestjs",
+    "typescript"
+  ],
+  "author": "Car Market Team",
+  "license": "MIT"
+}

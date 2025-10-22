@@ -1,0 +1,36 @@
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: carmarket-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: carmarket
+      POSTGRES_USER: carmarket_user
+      POSTGRES_PASSWORD: carmarket_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - carmarket-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: carmarket-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - carmarket-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  carmarket-network:
+    driver: bridge
