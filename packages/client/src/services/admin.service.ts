@@ -79,6 +79,20 @@ export class AdminService {
     return apiClient.delete<{ message: string }>(`/metadata/makes/${id}`);
   }
 
+  static async toggleMakeStatus(
+    id: string,
+    isActive: boolean
+  ): Promise<{ message: string; affectedModels: number }> {
+    return apiClient.patch(`/metadata/makes/${id}/toggle-status`, { isActive });
+  }
+
+  static async toggleModelStatus(
+    id: string,
+    isActive: boolean
+  ): Promise<CarModel> {
+    return apiClient.put(`/metadata/models/${id}`, { isActive });
+  }
+
   // Car Models Management
   static async createModel(data: CreateModelData): Promise<CarModel> {
     return apiClient.post<CarModel>("/metadata/models", data);

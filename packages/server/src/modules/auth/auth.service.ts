@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User, UserRole, OAuthProvider } from '../../entities/user.entity';
+import { User, LegacyUserRole, OAuthProvider } from '../../entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -48,7 +48,7 @@ export class AuthService {
       firstName,
       lastName,
       phoneNumber,
-      role: UserRole.USER,
+      role: LegacyUserRole.USER,
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -57,7 +57,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: savedUser.id,
       email: savedUser.email,
-      role: savedUser.role,
+      role: savedUser.role || LegacyUserRole.USER,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -103,7 +103,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role || LegacyUserRole.USER,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -268,7 +268,7 @@ export class AuthService {
           lastName,
           profileImage,
           provider,
-          role: UserRole.USER,
+          role: LegacyUserRole.USER,
           isActive: true,
           isEmailVerified: true, // OAuth users are considered email verified
         });
@@ -280,7 +280,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role || LegacyUserRole.USER,
     };
 
     const accessToken = this.jwtService.sign(payload);

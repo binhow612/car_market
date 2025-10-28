@@ -12,6 +12,7 @@ import {
   BarChart3,
   Eye,
   X,
+  Shield,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -24,11 +25,13 @@ import {
 import { AdminService } from "../services/admin.service";
 import type { DashboardStats, AdminMetadata } from "../services/admin.service";
 import type { CarMetadata } from "../services/metadata.service";
+import { RbacManagement } from "../components/RbacManagement";
+import { RbacTest } from "../components/RbacTest";
 import toast from "react-hot-toast";
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "makes" | "metadata" | "listings"
+    "overview" | "makes" | "metadata" | "listings" | "rbac"
   >("overview");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [adminMetadata, setAdminMetadata] = useState<AdminMetadata | null>(
@@ -333,6 +336,7 @@ export function AdminDashboard() {
             { id: "listings", label: "Pending Listings", icon: CheckCircle },
             { id: "makes", label: "Car Makes", icon: Car },
             { id: "metadata", label: "Metadata", icon: Database },
+            { id: "rbac", label: "RBAC Management", icon: Shield },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1054,6 +1058,14 @@ export function AdminDashboard() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* RBAC Management Tab */}
+      {activeTab === "rbac" && (
+        <div className="space-y-6">
+          <RbacTest />
+          <RbacManagement />
         </div>
       )}
     </div>

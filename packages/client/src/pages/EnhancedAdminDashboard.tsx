@@ -51,6 +51,10 @@ import type { DashboardStats, AdminMetadata } from "../services/admin.service";
 import type { CarMetadata } from "../services/metadata.service";
 import { formatDisplayValue, shouldShowChange } from "../utils/display.util";
 import LogManagementPage from "./LogManagementPage";
+import { RbacManagement } from "../components/RbacManagement";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "../components/ui/Select";
+import { apiClient } from "../lib/api";
+import { useAuthStore } from "../store/auth";
 import toast from "react-hot-toast";
 
 interface Listing {
@@ -167,6 +171,17 @@ export function EnhancedAdminDashboard() {
     totalPages: 0,
   });
 
+
+  // RBAC state
+  const [roles, setRoles] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<any[]>([]);
+  const [userRoles, setUserRoles] = useState<any[]>([]);
+  const [allUserRoles, setAllUserRoles] = useState<Record<string, any[]>>({}); // Store roles for all users
+  const [showRoleAssignment, setShowRoleAssignment] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [expirationDate, setExpirationDate] = useState<string>('');
+  const [rbacLoading, setRbacLoading] = useState(false);
+
   // Modals
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -191,6 +206,13 @@ export function EnhancedAdminDashboard() {
   const [rejectionReason, setRejectionReason] = useState<string | undefined>(
     undefined
   );
+
+  // Model management state
+  const [selectedMake, setSelectedMake] = useState<any>(null);
+  const [models, setModels] = useState<any[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [editingModel, setEditingModel] = useState<any>(null);
+  const [newModelForm, setNewModelForm] = useState(false);
 
   // Handle tab change and update URL
   const handleTabChange = (tab: typeof activeTab) => {
@@ -228,6 +250,9 @@ export function EnhancedAdminDashboard() {
 
       setStats({ ...statsData, ...analyticsData });
       setAdminMetadata(metadataData);
+      
+      // Load roles for RBAC functionality
+      await fetchRoles();
     } catch (error) {
       toast.error("Failed to load dashboard data");
     } finally {
@@ -262,8 +287,18 @@ export function EnhancedAdminDashboard() {
         usersPagination.limit
       );
 
-      setUsers((response as any).users);
+      const usersData = (response as any).users;
+      setUsers(usersData);
       setUsersPagination((response as any).pagination);
+      
+      // Also load RBAC data when loading users
+      await Promise.all([
+        fetchRoles(),
+        fetchPermissions()
+      ]);
+
+      // Fetch roles for all users
+      await fetchAllUserRoles(usersData);
     } catch (error) {
       toast.error("Failed to load users");
     } finally {
@@ -516,6 +551,283 @@ export function EnhancedAdminDashboard() {
     }
   };
 
+  // Model management handlers
+  const handleViewModels = async (make: any) => {
+    try {
+      setModelsLoading(true);
+      setSelectedMake(make);
+      
+      // Get models for this make from adminMetadata
+      const makeModels = adminMetadata?.models?.filter(model => model.makeId === make.id) || [];
+      setModels(makeModels);
+    } catch (error) {
+      toast.error("Failed to load models");
+    } finally {
+      setModelsLoading(false);
+    }
+  };
+
+  const handleCreateModel = async (data: {
+    name: string;
+    displayName: string;
+  }) => {
+    try {
+      await AdminService.createModel({
+        makeId: selectedMake.id,
+        name: data.name,
+        displayName: data.displayName,
+      });
+      toast.success(`🚗 Model "${data.displayName}" has been added successfully!`);
+      loadDashboardData(); // Reload to get updated models
+      setNewModelForm(false);
+      // Refresh models list
+      if (selectedMake) {
+        handleViewModels(selectedMake);
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't create the car model. Please try again.";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleUpdateModel = async (id: string, data: any) => {
+    try {
+      await AdminService.updateModel(id, data);
+      toast.success("Car model updated successfully!");
+      loadDashboardData(); // Reload to get updated models
+      setEditingModel(null);
+      // Refresh models list
+      if (selectedMake) {
+        handleViewModels(selectedMake);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update car model");
+    }
+  };
+
+  const handleDeleteModel = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this car model?"))
+      return;
+
+    try {
+      await AdminService.deleteModel(id);
+      toast.success("Car model deleted successfully!");
+      loadDashboardData(); // Reload to get updated models
+      // Refresh models list
+      if (selectedMake) {
+        handleViewModels(selectedMake);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to delete car model");
+    }
+  };
+
+  const handleToggleMakeStatus = async (make: any) => {
+    const newStatus = !make.isActive;
+    const action = newStatus ? 'activate' : 'deactivate';
+    
+    // Show warning when deactivating
+    if (!newStatus) {
+      const makeModels = adminMetadata?.models?.filter(m => m.makeId === make.id) || [];
+      const confirmMessage = makeModels.length > 0
+        ? `Are you sure you want to deactivate "${make.displayName}"?\n\nThis will also deactivate ${makeModels.length} model(s) associated with this make.`
+        : `Are you sure you want to deactivate "${make.displayName}"?`;
+      
+      if (!window.confirm(confirmMessage)) return;
+    }
+
+    try {
+      const result = await AdminService.toggleMakeStatus(make.id, newStatus);
+      
+      // Update local state immediately for better UX
+      if (adminMetadata) {
+        setAdminMetadata(prev => ({
+          ...prev!,
+          makes: prev!.makes.map(m => 
+            m.id === make.id ? { ...m, isActive: newStatus } : m
+          ),
+          // If deactivating make, also update models
+          models: !newStatus ? prev!.models.map(m => 
+            m.makeId === make.id ? { ...m, isActive: false } : m
+          ) : prev!.models
+        }));
+      }
+      
+      // Update models in current view if this make is selected
+      if (selectedMake && selectedMake.id === make.id) {
+        setModels(prevModels => 
+          prevModels.map(m => 
+            m.makeId === make.id ? { ...m, isActive: false } : m
+          )
+        );
+      }
+      
+      toast.success(result.message + (result.affectedModels > 0 ? ` (${result.affectedModels} models affected)` : ''));
+      
+      // Reload data in background to ensure consistency
+      loadDashboardData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || `Failed to ${action} make`);
+    }
+  };
+
+  const handleToggleModelStatus = async (model: any) => {
+    const newStatus = !model.isActive;
+    const action = newStatus ? 'activate' : 'deactivate';
+    
+    try {
+      await AdminService.toggleModelStatus(model.id, newStatus);
+      
+      // Update local state immediately for better UX
+      setModels(prevModels => 
+        prevModels.map(m => 
+          m.id === model.id ? { ...m, isActive: newStatus } : m
+        )
+      );
+      
+      // Also update adminMetadata for consistency
+      if (adminMetadata) {
+        setAdminMetadata(prev => ({
+          ...prev!,
+          models: prev!.models.map(m => 
+            m.id === model.id ? { ...m, isActive: newStatus } : m
+          )
+        }));
+      }
+      
+      toast.success(`Model ${action}d successfully!`);
+      
+      // Reload data in background to ensure consistency
+      loadDashboardData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || `Failed to ${action} model`);
+    }
+  };
+
+  // RBAC functions
+  const fetchRoles = async () => {
+    try {
+      setRbacLoading(true);
+      const data = await apiClient.get('/rbac/roles') as any[];
+      setRoles(data || []);
+    } catch (error) {
+      console.error('Failed to fetch roles:', error);
+      toast.error('Failed to fetch roles');
+    } finally {
+      setRbacLoading(false);
+    }
+  };
+
+  const fetchPermissions = async () => {
+    try {
+      const data = await apiClient.get('/rbac/permissions') as any[];
+      setPermissions(data || []);
+    } catch (error) {
+      console.error('Failed to fetch permissions:', error);
+      toast.error('Failed to fetch permissions');
+    }
+  };
+
+  const fetchUserRoles = async (userId: string) => {
+    try {
+      const data = await apiClient.get(`/rbac/roles/user/${userId}`) as any[];
+      setUserRoles(data || []);
+    } catch (error) {
+      console.error('Failed to fetch user roles:', error);
+      toast.error('Failed to fetch user roles');
+    }
+  };
+
+  const fetchAllUserRoles = async (usersData: any[]) => {
+    try {
+      const userRolesPromises = usersData.map(async (user) => {
+        try {
+          const roles = await apiClient.get(`/rbac/roles/user/${user.id}`) as any[];
+          return { userId: user.id, roles: roles || [] };
+        } catch (error) {
+          console.error(`Failed to fetch roles for user ${user.id}:`, error);
+          return { userId: user.id, roles: [] };
+        }
+      });
+
+      const userRolesResults = await Promise.all(userRolesPromises);
+      const userRolesMap: Record<string, any[]> = {};
+      
+      userRolesResults.forEach(({ userId, roles }) => {
+        userRolesMap[userId] = roles;
+      });
+
+      setAllUserRoles(userRolesMap);
+    } catch (error) {
+      console.error('Failed to fetch all user roles:', error);
+    }
+  };
+
+  const assignRole = async () => {
+    if (!selectedUser || !selectedRole) return;
+
+    try {
+      await apiClient.post('/rbac/roles/assign', {
+        userId: selectedUser.id,
+        roleId: selectedRole,
+        expiresAt: expirationDate || undefined,
+      });
+
+      toast.success('Role assigned successfully');
+      setShowRoleAssignment(false);
+      setSelectedRole('');
+      setExpirationDate('');
+      
+      // Refresh user roles and user data
+      await fetchUserRoles(selectedUser.id);
+      
+      // Update the allUserRoles state for this specific user
+      const updatedUserRoles = await apiClient.get(`/rbac/roles/user/${selectedUser.id}`) as any[];
+      setAllUserRoles(prev => ({
+        ...prev,
+        [selectedUser.id]: updatedUserRoles || []
+      }));
+      
+      await loadUsers(); // Refresh the entire user list to show updated roles
+    } catch (error) {
+      console.error('Failed to assign role:', error);
+      toast.error('Failed to assign role');
+    }
+  };
+
+  const removeRole = async (userId: string, roleId: string) => {
+    try {
+      await apiClient.delete('/rbac/roles/remove', {
+        data: {
+          userId,
+          roleId,
+        },
+      });
+
+      toast.success('Role removed successfully');
+      await fetchUserRoles(userId);
+      
+      // Update the allUserRoles state for this specific user
+      const updatedUserRoles = await apiClient.get(`/rbac/roles/user/${userId}`) as any[];
+      setAllUserRoles(prev => ({
+        ...prev,
+        [userId]: updatedUserRoles || []
+      }));
+      
+      await loadUsers(); // Refresh the entire user list to show updated roles
+    } catch (error) {
+      console.error('Failed to remove role:', error);
+      toast.error('Failed to remove role');
+    }
+  };
+
+  const getRoleName = (roleId: string) => {
+    const role = roles.find(r => r.id === roleId);
+    return role?.name || 'Unknown';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -553,7 +865,7 @@ export function EnhancedAdminDashboard() {
             value={activeTab}
             onValueChange={(value) => handleTabChange(value as any)}
           >
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-9">
               <TabsTrigger
                 value="overview"
                 className="flex items-center space-x-2"
@@ -1022,20 +1334,20 @@ export function EnhancedAdminDashboard() {
             {/* Users Tab */}
             <TabsContent value="users">
               <div className="space-y-6">
-                {/* Search */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search users..."
-                        value={usersSearch}
-                        onChange={(e) => setUsersSearch(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                    {/* Search */}
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Search users..."
+                            value={usersSearch}
+                            onChange={(e) => setUsersSearch(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
 
                 {/* Users Table */}
                 <Card>
@@ -1081,11 +1393,32 @@ export function EnhancedAdminDashboard() {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span
-                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}
-                                  >
-                                    {user.role}
-                                  </span>
+                                  <div className="space-y-1">
+                                    {/* Legacy Role */}
+                                    <span
+                                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}
+                                    >
+                                      {user.role}
+                                    </span>
+                                    {/* RBAC Roles */}
+                                    {allUserRoles[user.id] && allUserRoles[user.id].length > 0 && (
+                                      <div className="flex flex-wrap gap-1">
+                                        {allUserRoles[user.id].map((userRole, index) => {
+                                          // Use userRole.role.id if available, otherwise fallback to userRole.roleId
+                                          const roleId = userRole.role?.id || userRole.roleId;
+                                          return (
+                                            <span
+                                              key={index}
+                                              className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800"
+                                              title={`Assigned: ${new Date(userRole.assignedAt || userRole.createdAt).toLocaleDateString()}${userRole.expiresAt ? `, Expires: ${new Date(userRole.expiresAt).toLocaleDateString()}` : ''}`}
+                                            >
+                                              {getRoleName(roleId)}
+                                            </span>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span
@@ -1169,6 +1502,19 @@ export function EnhancedAdminDashboard() {
                                         <Shield className="h-4 w-4 text-purple-600" />
                                       </Button>
                                     )}
+                                    {/* RBAC Role Management */}
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setSelectedUser(user);
+                                        fetchUserRoles(user.id);
+                                        setShowRoleAssignment(true);
+                                      }}
+                                      title="Manage user roles"
+                                    >
+                                      <UserCheck className="h-4 w-4 text-blue-600" />
+                                    </Button>
                                     {/* Removed admin-to-user conversion for security */}
                                   </div>
                                 </td>
@@ -1477,6 +1823,9 @@ export function EnhancedAdminDashboard() {
                                 Display Name
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Models
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1485,60 +1834,89 @@ export function EnhancedAdminDashboard() {
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {adminMetadata.makes.map((make) => (
-                              <tr key={make.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {make.name}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {make.displayName}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      make.isActive
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-red-100 text-red-800"
-                                    }`}
-                                  >
-                                    {make.isActive ? (
-                                      <>
-                                        <CheckCircle className="w-3 h-3 mr-1" />
-                                        Active
-                                      </>
-                                    ) : (
-                                      <>
-                                        <XCircle className="w-3 h-3 mr-1" />
-                                        Inactive
-                                      </>
-                                    )}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      setEditingItem({ ...make, type: "make" })
-                                    }
-                                  >
-                                    <Edit className="w-3 h-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleDeleteMake(make.id)}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
+                            {adminMetadata.makes.map((make) => {
+                              const makeModels = adminMetadata?.models?.filter(model => model.makeId === make.id) || [];
+                              const isSelected = selectedMake?.id === make.id;
+                              
+                              return (
+                                <tr key={make.id} className={isSelected ? "bg-blue-50" : ""}>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {make.name}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {make.displayName}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                      {makeModels.length} models
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        make.isActive
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {make.isActive ? (
+                                        <>
+                                          <CheckCircle className="w-3 h-3 mr-1" />
+                                          Active
+                                        </>
+                                      ) : (
+                                        <>
+                                          <XCircle className="w-3 h-3 mr-1" />
+                                          Inactive
+                                        </>
+                                      )}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleToggleMakeStatus(make)}
+                                      className="text-orange-600 hover:bg-orange-50"
+                                      title="Deactivate make"
+                                    >
+                                      <Ban className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleViewModels(make)}
+                                      className={isSelected ? "bg-blue-100 text-blue-700" : ""}
+                                    >
+                                      <Eye className="w-3 h-3 mr-1" />
+                                      View Models
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        setEditingItem({ ...make, type: "make" })
+                                      }
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleDeleteMake(make.id)}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
                     </CardContent>
                   </Card>
+
                 </div>
               )}
             </TabsContent>
@@ -1691,6 +2069,11 @@ export function EnhancedAdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* RBAC Tab */}
+            <TabsContent value="rbac">
+              <RbacManagement />
             </TabsContent>
           </Tabs>
         </div>
@@ -2566,6 +2949,370 @@ export function EnhancedAdminDashboard() {
         </div>
       )}
 
+      {/* Models Management Modal */}
+      {selectedMake && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center space-x-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Car className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {selectedMake.displayName} Models
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Manage car models for {selectedMake.displayName}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Button
+                  onClick={() => setNewModelForm(true)}
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New Model
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedMake(null);
+                    setModels([]);
+                  }}
+                  className="px-4 py-2"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Close
+                </Button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {modelsLoading ? (
+                <div className="flex justify-center items-center py-16">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading models...</p>
+                  </div>
+                </div>
+              ) : models.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <Car className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Total Models</p>
+                            <p className="text-2xl font-bold text-gray-900">{models.length}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <CheckCircle className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Active Models</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {models.filter(m => m.isActive).length}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-gray-100 rounded-lg">
+                            <XCircle className="h-5 w-5 text-gray-600" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Inactive Models</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {models.filter(m => !m.isActive).length}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Models Table */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Car className="w-5 h-5 mr-2" />
+                        Models List ({models.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Model Details
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Body Styles
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Created
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {models.map((model) => (
+                              <tr key={model.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {model.displayName}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {model.name}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {model.bodyStyles && model.bodyStyles.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {model.bodyStyles.map((style: string, index: number) => (
+                                        <span
+                                          key={index}
+                                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                        >
+                                          {style}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400 text-sm">No styles defined</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      model.isActive
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
+                                    {model.isActive ? (
+                                      <>
+                                        <CheckCircle className="w-3 h-3 mr-1" />
+                                        Active
+                                      </>
+                                    ) : (
+                                      <>
+                                        <XCircle className="w-3 h-3 mr-1" />
+                                        Inactive
+                                      </>
+                                    )}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {model.createdAt ? new Date(model.createdAt).toLocaleDateString() : 'N/A'}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      size="sm"
+                                      variant={model.isActive ? "outline" : "default"}
+                                      onClick={() => handleToggleModelStatus(model)}
+                                      className={model.isActive ? "text-orange-600 hover:bg-orange-50" : "bg-green-600 text-white hover:bg-green-700"}
+                                      title={model.isActive ? "Deactivate model" : "Activate model"}
+                                    >
+                                      {model.isActive ? <Ban className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditingModel(model)}
+                                      title="Edit model"
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleDeleteModel(model.id)}
+                                      title="Delete model"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                    <Car className="h-12 w-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-2">
+                    No models found
+                  </h3>
+                  <p className="text-gray-500 mb-8 max-w-md mx-auto">
+                    This make doesn't have any models yet. Add the first model to get started.
+                  </p>
+                  <Button
+                    onClick={() => setNewModelForm(true)}
+                    className="bg-blue-600 text-white hover:bg-blue-700 px-6 py-3"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add First Model
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Model Modal */}
+      {newModelForm && selectedMake && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Add New Model for {selectedMake.displayName}
+            </h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                const data = Object.fromEntries(formData.entries());
+                handleCreateModel(data as any);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <Input name="name" required placeholder="e.g., camry" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Display Name
+                </label>
+                <Input name="displayName" required placeholder="e.g., Camry" />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setNewModelForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Create Model
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Model Modal */}
+      {editingModel && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Edit Model
+            </h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                const data = Object.fromEntries(formData.entries());
+                handleUpdateModel(editingModel.id, data);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <Input
+                  name="name"
+                  defaultValue={editingModel.name}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Display Name
+                </label>
+                <Input
+                  name="displayName"
+                  defaultValue={editingModel.displayName}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="isActive"
+                    defaultChecked={editingModel.isActive}
+                    className="mr-2"
+                  />
+                  Active
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingModel(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Update Model
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal */}
       {showConfirmationModal && confirmationAction && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
@@ -2625,6 +3372,114 @@ export function EnhancedAdminDashboard() {
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   Confirm
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Assignment Modal */}
+      {showRoleAssignment && selectedUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
+                Manage Roles for {selectedUser.firstName} {selectedUser.lastName}
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full p-2 hover:bg-gray-100"
+                onClick={() => {
+                  setShowRoleAssignment(false);
+                  setSelectedUser(null);
+                  setSelectedRole('');
+                  setExpirationDate('');
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Assign New Role */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Assign New Role
+                </label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger>
+                    Choose a role
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name.replace('_', ' ')} - {role.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Expiration Date (Optional)
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={expirationDate}
+                  onChange={(e) => setExpirationDate(e.target.value)}
+                />
+              </div>
+
+              {/* Current User Roles */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Roles
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {userRoles.length === 0 ? (
+                    <p className="text-sm text-gray-500">No roles assigned</p>
+                  ) : (
+                    userRoles.map((userRole) => {
+                      const roleId = userRole.role?.id || userRole.roleId;
+                      return (
+                        <div key={userRole.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <span>{getRoleName(roleId)}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeRole(selectedUser.id, roleId)}
+                          >
+                            <UserX className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowRoleAssignment(false);
+                    setSelectedUser(null);
+                    setSelectedRole('');
+                    setExpirationDate('');
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={assignRole}
+                  disabled={!selectedRole}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Assign Role
                 </Button>
               </div>
             </div>

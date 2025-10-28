@@ -15,7 +15,7 @@ import { CarCard } from "../components/CarCard";
 import { useAuthStore } from "../store/auth";
 import type { ListingDetail, SearchFilters } from "../types";
 import { ListingService } from "../services/listing.service";
-import { useMetadata } from "../services/metadata.service";
+import { useMetadata, MetadataService } from "../services/metadata.service";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -28,6 +28,7 @@ export function HomePage() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({});
   const { metadata } = useMetadata();
+  const [availableModels, setAvailableModels] = useState<Array<{ value: string; label: string }>>([]);
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -61,6 +62,33 @@ export function HomePage() {
       }
     }
   }, [user, location.state]);
+
+  // Fetch models when make changes
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (filters.make && metadata?.makes) {
+        const selectedMake = metadata.makes.find((m) => m.name === filters.make);
+        if (selectedMake) {
+          try {
+            const models = await MetadataService.getModelsByMake(selectedMake.id);
+            setAvailableModels(
+              models.map((model) => ({
+                value: model.name,
+                label: model.displayName,
+              }))
+            );
+          } catch (error) {
+            console.error("Failed to fetch models:", error);
+            setAvailableModels([]);
+          }
+        }
+      } else {
+        setAvailableModels([]);
+      }
+    };
+
+    fetchModels();
+  }, [filters.make, metadata?.makes]);
 
   const fetchListings = useCallback(
     async (currentFilters: SearchFilters = {}) => {
@@ -311,6 +339,7 @@ export function HomePage() {
                         setFilters({
                           ...filters,
                           make: (value as string) || undefined,
+                          model: undefined, // Clear model when make changes
                         })
                       }
                       placeholder="Any Make"
@@ -323,16 +352,22 @@ export function HomePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Model
                     </label>
-                    <Input
-                      type="text"
-                      placeholder="Any Model"
+                    <EnhancedSelect
+                      options={[
+                        { value: "", label: "Any Model" },
+                        ...availableModels,
+                      ]}
                       value={filters.model || ""}
-                      onChange={(e) =>
+                      onValueChange={(value) =>
                         setFilters({
                           ...filters,
-                          model: e.target.value || undefined,
+                          model: (value as string) || undefined,
                         })
                       }
+                      placeholder={filters.make ? "Select Model" : "Select Make First"}
+                      searchable={true}
+                      multiple={false}
+                      disabled={!filters.make || availableModels.length === 0}
                     />
                   </div>
 

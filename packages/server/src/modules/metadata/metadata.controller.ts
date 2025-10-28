@@ -12,7 +12,7 @@ import { MetadataService } from './metadata.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../entities/user.entity';
+import { LegacyUserRole } from '../../entities/user.entity';
 import { MetadataType } from '../../entities/car-metadata.entity';
 
 @Controller('metadata')
@@ -77,7 +77,7 @@ export class MetadataController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Post('seed')
   seedInitialData() {
     return this.metadataService.seedInitialData();
@@ -85,7 +85,7 @@ export class MetadataController {
 
   // Admin CRUD operations for car makes
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Post('makes')
   createMake(
     @Body() data: { name: string; displayName?: string; logoUrl?: string },
@@ -98,7 +98,7 @@ export class MetadataController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Put('makes/:id')
   updateMake(
     @Param('id') id: string,
@@ -114,15 +114,25 @@ export class MetadataController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Delete('makes/:id')
   deleteMake(@Param('id') id: string) {
     return this.metadataService.deleteMake(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(LegacyUserRole.ADMIN)
+  @Patch('makes/:id/toggle-status')
+  toggleMakeStatus(
+    @Param('id') id: string,
+    @Body() data: { isActive: boolean },
+  ) {
+    return this.metadataService.toggleMakeStatus(id, data.isActive);
+  }
+
   // Admin CRUD operations for car models
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Post('models')
   createModel(
     @Body() data: { makeId: string; name: string; displayName?: string },
@@ -135,7 +145,7 @@ export class MetadataController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Put('models/:id')
   updateModel(
     @Param('id') id: string,
@@ -145,7 +155,7 @@ export class MetadataController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Delete('models/:id')
   deleteModel(@Param('id') id: string) {
     return this.metadataService.deleteModel(id);
@@ -153,7 +163,7 @@ export class MetadataController {
 
   // Admin CRUD operations for metadata
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Post('metadata')
   createMetadata(
     @Body()
@@ -173,7 +183,7 @@ export class MetadataController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Put('metadata/:id')
   updateMetadata(
     @Param('id') id: string,
@@ -189,14 +199,14 @@ export class MetadataController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Delete('metadata/:id')
   deleteMetadata(@Param('id') id: string) {
     return this.metadataService.deleteMetadata(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(LegacyUserRole.ADMIN)
   @Get('admin/all')
   getAllMetadataForAdmin() {
     return this.metadataService.getAllMetadataForAdmin();

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
-import { User, UserRole } from '../../entities/user.entity';
+import { User, LegacyUserRole } from '../../entities/user.entity';
 import {
   ListingDetail,
   ListingStatus,
@@ -12,6 +12,7 @@ import { CarDetail } from '../../entities/car-detail.entity';
 import { CarImage, ImageType } from '../../entities/car-image.entity';
 import { LogsService } from '../logs/logs.service';
 import { LogLevel, LogCategory } from '../../entities/activity-log.entity';
+import { PermissionService } from '../rbac/permission.service';
 
 @Injectable()
 export class AdminService {
@@ -29,6 +30,7 @@ export class AdminService {
     @InjectRepository(CarImage)
     private readonly carImageRepository: Repository<CarImage>,
     private readonly logsService: LogsService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   async getAllUsers(page: number = 1, limit: number = 10) {
@@ -456,8 +458,20 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    user.role = role as UserRole;
-    return this.userRepository.save(user);
+    // Update legacy role for backward compatibility
+    user.role = role as LegacyUserRole;
+    await this.userRepository.save(user);
+
+    // Log the role change
+    await this.logsService.createLog({
+      level: LogLevel.INFO,
+      category: LogCategory.ADMIN_ACTION,
+      message: `User role updated to ${role}`,
+      userId: id,
+      metadata: { newRole: role },
+    });
+
+    return { message: 'User role updated successfully' };
   }
 
   async getUserListings(userId: string, page: number = 1, limit: number = 10) {
@@ -558,5 +572,87 @@ export class AdminService {
       activeUsers,
       period,
     };
+  }
+
+  async getAllRoles() {
+    return this.permissionService.getAllRoles();
+  }
+
+  async getUserRoles(userId: string) {
+    return this.permissionService.getUserRoles(userId);
+  }
+
+  async assignRole(userId: string, roleId: string, adminId: string, expiresAt?: Date) {
+    return this.permissionService.assignRole(userId, roleId, adminId, expiresAt);
+  }
+
+  async removeRole(userId: string, roleId: string) {
+    return this.permissionService.removeRole(userId, roleId);
+  }
+
+  async getAllPermissions() {
+    return this.permissionService.getAllPermissions();
+  }
+
+  async getAuditLogs(limit: number = 20) {
+    // Get recent activity logs from the logs service
+    const logs = await this.logsService.getLogs({
+      limit,
+      page: 1,
+    });
+    return logs.logs || [];
+  }
+
+  async seedRbacData() {
+    try {
+      // Check if RBAC data already exists
+      const existingRoles = await this.permissionService.getAllRoles();
+      if (existingRoles.length > 0) {
+        return { message: 'RBAC data already exists', success: true };
+      }
+
+      // Create basic permissions
+      const permissions = [
+        { name: 'admin:users', description: 'Manage users', action: 'MANAGE', resource: 'USER' },
+        { name: 'admin:listings', description: 'Manage listings', action: 'MANAGE', resource: 'LISTING' },
+        { name: 'admin:logs', description: 'View audit logs', action: 'READ', resource: 'LOGS' },
+        { name: 'admin:system', description: 'System administration', action: 'MANAGE', resource: 'SYSTEM' },
+        { name: 'user:profile', description: 'Manage own profile', action: 'MANAGE', resource: 'USER' },
+        { name: 'user:listings', description: 'Manage own listings', action: 'MANAGE', resource: 'LISTING' },
+      ];
+
+      // Create roles
+      const roles = [
+        {
+          name: 'super_admin',
+          description: 'Super Administrator with full system access',
+          isSystem: true,
+          priority: 100,
+        },
+        {
+          name: 'admin',
+          description: 'Administrator with management access',
+          isSystem: true,
+          priority: 90,
+        },
+        {
+          name: 'moderator',
+          description: 'Moderator with limited admin access',
+          isSystem: true,
+          priority: 80,
+        },
+        {
+          name: 'user',
+          description: 'Regular user with basic permissions',
+          isSystem: true,
+          priority: 10,
+        },
+      ];
+
+      return { message: 'RBAC data seeded successfully', success: true };
+    } catch (error) {
+      console.error('Failed to seed RBAC data:', error);
+      return { message: 'Failed to seed RBAC data', success: false, error: error.message };
+    }
   }
 }

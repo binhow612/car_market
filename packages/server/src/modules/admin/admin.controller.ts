@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
   Delete,
   Param,
@@ -8,17 +9,18 @@ import {
   UseGuards,
   Query,
   ParseIntPipe,
+  Request,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { User, UserRole } from '../../entities/user.entity';
+import { User, LegacyUserRole } from '../../entities/user.entity';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@Roles(LegacyUserRole.ADMIN)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
@@ -134,6 +136,47 @@ export class AdminController {
     return this.adminService.getUserListings(id, page, limit);
   }
 
+  // RBAC endpoints for admin dashboard
+  @Get('rbac/roles')
+  getAllRoles() {
+    return this.adminService.getAllRoles();
+  }
+
+  @Get('rbac/roles/user/:userId')
+  getUserRoles(@Param('userId') userId: string) {
+    return this.adminService.getUserRoles(userId);
+  }
+
+  @Post('rbac/roles/assign')
+  assignRole(
+    @Body() body: { userId: string; roleId: string; expiresAt?: string },
+    @Request() req: any,
+  ) {
+    return this.adminService.assignRole(
+      body.userId,
+      body.roleId,
+      req.user.id,
+      body.expiresAt ? new Date(body.expiresAt) : undefined,
+    );
+  }
+
+  @Delete('rbac/roles/remove')
+  removeRole(@Body() body: { userId: string; roleId: string }) {
+    return this.adminService.removeRole(body.userId, body.roleId);
+  }
+
+  @Get('rbac/permissions')
+  getAllPermissions() {
+    return this.adminService.getAllPermissions();
+  }
+
+  @Get('rbac/audit-logs')
+  getAuditLogs(
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 20,
+  ) {
+    return this.adminService.getAuditLogs(limit);
+  }
+
   // Analytics and reports
   @Get('analytics/overview')
   getAnalyticsOverview() {
@@ -148,5 +191,10 @@ export class AdminController {
   @Get('analytics/users')
   getUserAnalytics(@Query('period') period: string = '30d') {
     return this.adminService.getUserAnalytics(period);
+  }
+
+  @Post('rbac/seed')
+  seedRbacData() {
+    return this.adminService.seedRbacData();
   }
 }

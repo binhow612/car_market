@@ -15,6 +15,10 @@ import { ChatMessage } from '../entities/chat-message.entity';
 import { ListingPendingChanges } from '../entities/listing-pending-changes.entity';
 import { ActivityLog } from '../entities/activity-log.entity';
 import { FAQ } from '../entities/faq.entity';
+import { Permission } from '../entities/permission.entity';
+import { Role } from '../entities/role.entity';
+import { UserRole } from '../entities/user-role.entity';
+import { AuditLog } from '../entities/audit-log.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -43,6 +47,10 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         ListingPendingChanges,
         ActivityLog,
         FAQ,
+        Permission,
+        Role,
+        UserRole,
+        AuditLog,
       ],
       synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       logging: this.configService.get<string>('NODE_ENV') === 'development' ? ['error'] : false,

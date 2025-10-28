@@ -21,7 +21,7 @@ export function NotificationProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, isLoading } = useAuthStore();
   const [unreadCount, setUnreadCount] = useState(0);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
 
@@ -41,8 +41,19 @@ export function NotificationProvider({
         // Don't crash the app, just keep current unread count
         // setUnreadCount(0); // Optionally reset to 0
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to refresh conversations:", error);
+      
+      // If it's a 401 error, the token might be expired
+      if (error.response?.status === 401) {
+        console.log("Authentication token expired, clearing auth state");
+        // Clear auth state and redirect to login
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        return;
+      }
+      
       // Don't crash the app, just log the error
     }
   };
@@ -52,11 +63,12 @@ export function NotificationProvider({
   };
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    // Only proceed if auth is not loading and user is authenticated
+    if (!isLoading && isAuthenticated && user) {
       // Add a small delay to ensure authentication state is fully initialized
       const timer = setTimeout(() => {
         refreshConversations();
-      }, 100);
+      }, 200);
 
       // Listen for global notifications
       const unsubscribeGlobalNotification = socketService.on(
@@ -80,11 +92,12 @@ export function NotificationProvider({
         clearInterval(interval);
         unsubscribeGlobalNotification();
       };
-    } else {
+    } else if (!isLoading) {
+      // Only clear state if auth is not loading
       setUnreadCount(0);
       setConversations([]);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isLoading, isAuthenticated, user?.id]);
 
   return (
     <NotificationContext.Provider

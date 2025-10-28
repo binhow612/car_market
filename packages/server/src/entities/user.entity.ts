@@ -9,8 +9,10 @@ import {
 import { Exclude } from 'class-transformer';
 import { ListingDetail } from './listing-detail.entity';
 import { Transaction } from './transaction.entity';
+import { UserRole } from './user-role.entity';
 
-export enum UserRole {
+// Keep legacy enum for backward compatibility during migration
+export enum LegacyUserRole {
   USER = 'user',
   ADMIN = 'admin',
 }
@@ -56,10 +58,11 @@ export class User {
 
   @Column({
     type: 'enum',
-    enum: UserRole,
-    default: UserRole.USER,
+    enum: LegacyUserRole,
+    default: LegacyUserRole.USER,
+    nullable: true, // Make nullable for migration
   })
-  role: UserRole;
+  role?: LegacyUserRole;
 
   @Column({ default: true })
   isActive: boolean;
@@ -98,6 +101,9 @@ export class User {
 
   @OneToMany(() => Transaction, (transaction) => transaction.seller)
   sales: Transaction[];
+
+  @OneToMany(() => UserRole, (userRole) => userRole.user)
+  userRoles: UserRole[];
 
   // Virtual properties
   get fullName(): string {

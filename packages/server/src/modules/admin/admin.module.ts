@@ -9,6 +9,7 @@ import { ListingPendingChanges } from '../../entities/listing-pending-changes.en
 import { CarDetail } from '../../entities/car-detail.entity';
 import { CarImage } from '../../entities/car-image.entity';
 import { LogsModule } from '../logs/logs.module';
+import { RbacModule } from '../rbac/rbac.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { LogsModule } from '../logs/logs.module';
       CarImage,
     ]),
     LogsModule,
+    RbacModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

@@ -14,6 +14,7 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { LogsModule } from './modules/logs/logs.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
+import { RbacModule } from './modules/rbac/rbac.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AssistantModule } from './modules/assistant/assistant.module';
     ChatModule,
     LogsModule,
     AssistantModule,
+    RbacModule,
   ],
   controllers: [AppController],
   providers: [AppService],

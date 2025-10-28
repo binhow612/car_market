@@ -25,6 +25,7 @@ import {
 import { ListingService } from "../services/listing.service";
 import { useMetadata } from "../services/metadata.service";
 import type { ListingDetail } from "../types";
+import { DraggableImageGallery } from "../components/DraggableImageGallery";
 
 const editListingSchema = z.object({
   // Listing Information
@@ -178,6 +179,33 @@ export function EditListingPage() {
     setCurrentImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleImageReorder = (reorderedImages: any[]) => {
+    // Separate current images and new uploaded images
+    const currentImageItems = reorderedImages.filter(img => img.isExisting);
+    const newImageItems = reorderedImages.filter(img => !img.isExisting);
+    
+    // Update current images
+    const reorderedCurrentImages = currentImageItems.map(img => img.originalImage);
+    setCurrentImages(reorderedCurrentImages);
+    
+    // Update uploaded images
+    const reorderedUploadedImages = newImageItems.map(img => img.file).filter(Boolean) as File[];
+    setUploadedImages(reorderedUploadedImages);
+  };
+
+  const handleImageRemove = (imageId: string) => {
+    const index = parseInt(imageId);
+    const allImages = [...currentImages.map((img, i) => ({ id: i.toString(), isExisting: true, originalImage: img })), 
+                      ...uploadedImages.map((file, i) => ({ id: (currentImages.length + i).toString(), isExisting: false, file }))];
+    
+    const imageToRemove = allImages[index];
+    if (imageToRemove.isExisting) {
+      handleDeleteCurrentImage(index);
+    } else {
+      removeImage(index - currentImages.length);
+    }
+  };
+
   const toggleFeature = (feature: string) => {
     setSelectedFeatures((prev) =>
       prev.includes(feature)
@@ -258,6 +286,28 @@ export function EditListingPage() {
         imageUrls = uploadResponse.images;
       }
 
+      // Prepare images array with correct order (existing + new)
+      const allImages = [
+        ...currentImages.map((image, index) => ({
+          filename: image.filename,
+          originalName: image.originalName,
+          url: image.url,
+          type: image.type || (index === 0 ? "exterior" : "other"),
+          alt: image.alt || `${data.make} ${data.model} image ${index + 1}`,
+          fileSize: image.fileSize || 0,
+          mimeType: image.mimeType || 'image/jpeg',
+        })),
+        ...imageUrls.map((img, index) => ({
+          filename: img.filename,
+          originalName: img.originalName,
+          url: img.url,
+          type: (currentImages.length + index) === 0 ? "exterior" : "other",
+          alt: `${data.make} ${data.model} image ${currentImages.length + index + 1}`,
+          fileSize: img.fileSize,
+          mimeType: img.mimeType,
+        })),
+      ];
+
       const updateData = {
         title: data.title,
         description: data.description,
@@ -287,18 +337,8 @@ export function EditListingPage() {
           description: data.carDescription,
           features: selectedFeatures,
         },
-        // Include new images if uploaded
-        ...(imageUrls.length > 0 && {
-          images: imageUrls.map((img, index) => ({
-            filename: img.filename,
-            originalName: img.originalName,
-            url: img.url,
-            type: index === 0 ? "exterior" : "other",
-            alt: `${data.make} ${data.model} image ${index + 1}`,
-            fileSize: img.fileSize,
-            mimeType: img.mimeType,
-          })),
-        }),
+        // Include all images in correct order
+        images: allImages,
       };
 
       await ListingService.updateListing(id, updateData);
@@ -997,37 +1037,30 @@ export function EditListingPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Current Images */}
-              {currentImages.length > 0 && (
+              {/* Combined Images Gallery */}
+              {(currentImages.length > 0 || uploadedImages.length > 0) && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Images
+                    Car Images
                   </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {currentImages.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={`http://localhost:3000${image.url}`}
-                          alt={`Current image ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                          onError={(e) => {
-                            console.error("Failed to load image:", image.url);
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                        <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                          Current
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCurrentImage(index)}
-                          className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <DraggableImageGallery
+                    images={[
+                      ...currentImages.map((image, index) => ({
+                        id: index.toString(),
+                        src: `http://localhost:3000${image.url}`,
+                        isExisting: true,
+                        originalImage: image,
+                      })),
+                      ...uploadedImages.map((file, index) => ({
+                        id: (currentImages.length + index).toString(),
+                        src: URL.createObjectURL(file),
+                        file: file,
+                        isExisting: false,
+                      })),
+                    ]}
+                    onReorder={handleImageReorder}
+                    onRemove={handleImageRemove}
+                  />
                 </div>
               )}
 
@@ -1064,27 +1097,6 @@ export function EditListingPage() {
                   </label>
                 </div>
               </div>
-
-              {uploadedImages.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {uploadedImages.map((file, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>

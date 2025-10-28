@@ -481,4 +481,33 @@ export class MetadataService {
 
     return { makes, models, metadata };
   }
+
+  // Toggle make status with cascade to models
+  async toggleMakeStatus(id: string, isActive: boolean) {
+    const make = await this.carMakeRepository.findOne({ 
+      where: { id },
+      relations: ['models']
+    });
+    
+    if (!make) {
+      throw new NotFoundException('Car make not found');
+    }
+
+    // Update make status
+    make.isActive = isActive;
+    await this.carMakeRepository.save(make);
+
+    // If deactivating make, also deactivate all its models
+    if (!isActive && make.models && make.models.length > 0) {
+      await this.carModelRepository.update(
+        { makeId: id },
+        { isActive: false }
+      );
+    }
+
+    return { 
+      message: `Make ${isActive ? 'activated' : 'deactivated'} successfully`,
+      affectedModels: !isActive ? make.models.length : 0
+    };
+  }
 }

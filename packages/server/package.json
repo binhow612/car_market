@@ -19,7 +19,14 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "import:car-data": "ts-node -r tsconfig-paths/register src/scripts/import-car-data.ts",
-    "regenerate:faq": "ts-node -r tsconfig-paths/register src/scripts/regenerate-faq-embeddings.ts"
+    "regenerate:faq": "ts-node -r tsconfig-paths/register src/scripts/regenerate-faq-embeddings.ts",
+    "seed:rbac": "ts-node -r tsconfig-paths/register src/scripts/run-rbac-seed.ts",
+    "setup:rbac": "ts-node -r tsconfig-paths/register src/scripts/setup-rbac.ts",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:generate": "npm run typeorm -- migration:generate -d src/config/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run -d src/config/data-source.ts",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/config/data-source.ts",
+    "migration:create": "npm run typeorm -- migration:create"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

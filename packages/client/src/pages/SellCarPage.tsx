@@ -25,6 +25,7 @@ import {
 } from "../components/ui/Card";
 import { ListingService } from "../services/listing.service";
 import { useMetadata } from "../services/metadata.service";
+import { DraggableImageGallery } from "../components/DraggableImageGallery";
 
 const listingSchema = z.object({
   // Listing Information
@@ -161,7 +162,13 @@ export function SellCarPage() {
     setUploadedImages((prev) => [...prev, ...validFiles]);
   };
 
-  const removeImage = (index: number) => {
+  const handleImageReorder = (reorderedImages: any[]) => {
+    const files = reorderedImages.map(img => img.file).filter(Boolean) as File[];
+    setUploadedImages(files);
+  };
+
+  const handleImageRemove = (imageId: string) => {
+    const index = parseInt(imageId);
     setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -878,31 +885,15 @@ export function SellCarPage() {
               </div>
 
               {uploadedImages.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {uploadedImages.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`Car image ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                      {index === 0 && (
-                        <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                          Primary
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <DraggableImageGallery
+                  images={uploadedImages.map((file, index) => ({
+                    id: index.toString(),
+                    src: URL.createObjectURL(file),
+                    file: file,
+                  }))}
+                  onReorder={handleImageReorder}
+                  onRemove={handleImageRemove}
+                />
               )}
             </div>
           </CardContent>
