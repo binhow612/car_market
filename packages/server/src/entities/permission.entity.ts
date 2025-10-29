@@ -31,34 +31,34 @@ export enum PermissionResource {
 @Entity('permissions')
 export class Permission {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true })
-  name: string;
+  name!: string;
 
-  @Column({ nullable: true })
-  description: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  description!: string;
 
   @Column({
     type: 'enum',
     enum: PermissionAction,
   })
-  action: PermissionAction;
+  action!: PermissionAction;
 
   @Column({
     type: 'enum',
     enum: PermissionResource,
   })
-  resource: PermissionResource;
+  resource!: PermissionResource;
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   @ManyToMany(() => Role, (role) => role.permissions)
@@ -67,5 +67,5 @@ export class Permission {
     joinColumn: { name: 'permissionId', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'roleId', referencedColumnName: 'id' },
   })
-  roles: Role[];
+  roles!: Role[];
 }

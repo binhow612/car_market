@@ -39,6 +39,87 @@ export class ListingsService {
     private readonly logsService: LogsService,
   ) {}
 
+  /**
+   * Analyzes image changes to determine if they are reorder-only or substantive changes
+   * @param existingImages Current images in database
+   * @param newImages New images from request
+   * @returns 'reorder-only' if only sortOrder/isPrimary changed, 'substantive' if images added/removed/replaced
+   */
+  private analyzeImageChanges(existingImages: CarImage[], newImages: any[]): 'reorder-only' | 'substantive' {
+    // If different number of images, it's a substantive change
+    if (existingImages.length !== newImages.length) {
+      return 'substantive';
+    }
+
+    // Create maps for easier comparison
+    const existingMap = new Map(existingImages.map(img => [img.filename, img]));
+    const newMap = new Map(newImages.map(img => [img.filename, img]));
+
+    // Check if all filenames exist in both sets
+    for (const filename of existingMap.keys()) {
+      if (!newMap.has(filename)) {
+        return 'substantive'; // Image was removed
+      }
+    }
+
+    for (const filename of newMap.keys()) {
+      if (!existingMap.has(filename)) {
+        return 'substantive'; // New image was added
+      }
+    }
+
+    // All filenames match, check if only sortOrder/isPrimary changed
+    for (const [filename, newImg] of newMap) {
+      const existingImg = existingMap.get(filename);
+      if (!existingImg) continue;
+
+      // Check if any substantive properties changed (excluding sortOrder and isPrimary)
+      if (
+        existingImg.url !== newImg.url ||
+        existingImg.originalName !== newImg.originalName ||
+        existingImg.type !== newImg.type ||
+        existingImg.alt !== newImg.alt ||
+        existingImg.fileSize !== newImg.fileSize ||
+        existingImg.mimeType !== newImg.mimeType
+      ) {
+        return 'substantive';
+      }
+    }
+
+    // Only sortOrder/isPrimary changed
+    return 'reorder-only';
+  }
+
+  /**
+   * Applies image reordering changes directly to the database
+   * @param carDetailId The car detail ID
+   * @param newImages Array of images with new sortOrder and isPrimary values
+   * @param userId User ID for logging
+   */
+  private async applyImageReordering(carDetailId: string, newImages: any[], _userId: string): Promise<void> {
+    // Get existing images
+    const existingImages = await this.carImageRepository.find({
+      where: { carDetailId },
+      order: { sortOrder: 'ASC' },
+    });
+
+    // Create a map for quick lookup
+    const existingMap = new Map(existingImages.map(img => [img.filename, img]));
+
+    // Update each image's sortOrder and isPrimary
+    for (let i = 0; i < newImages.length; i++) {
+      const newImage = newImages[i];
+      const existingImage = existingMap.get(newImage.filename);
+      
+      if (existingImage) {
+        await this.carImageRepository.update(existingImage.id, {
+          sortOrder: i,
+          isPrimary: i === 0, // First image is primary
+        });
+      }
+    }
+  }
+
   async create(
     userId: string,
     createListingDto: CreateListingDto,
@@ -66,13 +147,13 @@ export class ListingsService {
           filename: image.filename,
           originalName: image.originalName,
           url: image.url,
-          type: (image.type as ImageType) || ImageType.EXTERIOR,
+          type: image.type ?? ImageType.EXTERIOR,
           sortOrder: index,
           isPrimary: index === 0,
-          alt: image.alt,
+          alt: image.alt ?? null,
           carDetailId: savedCarDetail.id,
-          fileSize: image.fileSize || 0,
-          mimeType: image.mimeType || 'image/jpeg',
+          fileSize: image.fileSize ?? null,
+          mimeType: image.mimeType ?? null,
         }),
       );
       await this.carImageRepository.save(carImages);
@@ -147,7 +228,7 @@ export class ListingsService {
   ): Promise<ListingDetail> {
     const listing = await this.listingRepository.findOne({
       where: { id },
-      relations: ['carDetail'],
+      relations: ['carDetail', 'carDetail.images'],
     });
 
     if (!listing) {
@@ -171,40 +252,67 @@ export class ListingsService {
     const carDetailChanges: Record<string, any> = {};
 
     // Check for listing changes
-    Object.keys(listingData).forEach((key) => {
-      if (
-        listingData[key] !== undefined &&
-        hasActualChanges(originalValues[key], listingData[key])
-      ) {
-        changes[key] = listingData[key];
+    (Object.entries(listingData) as [keyof UpdateListingDto, unknown][]) .forEach(([key, value]) => {
+      const allowedKeys: Array<keyof UpdateListingDto> = [
+        'title', 'description', 'price', 'priceType', 'location', 'city', 'state', 'country', 'carDetail', 'images'
+      ];
+      if (!allowedKeys.includes(key)) return;
+      if (value !== undefined && hasActualChanges((originalValues as any)[key], value)) {
+        (changes as any)[key] = value;
       }
     });
 
     // Check for car detail changes
     if (carDetail) {
-      Object.keys(carDetail).forEach((key) => {
-        if (
-          carDetail[key] !== undefined &&
-          hasActualChanges(originalValues.carDetail[key], carDetail[key])
-        ) {
-          carDetailChanges[key] = carDetail[key];
+      const allowedCarKeys = [
+        'make','model','year','bodyType','fuelType','transmission','engineSize','enginePower','mileage','color',
+        'numberOfDoors','numberOfSeats','condition','vin','registrationNumber','previousOwners','description','features'
+      ] as const;
+      (Object.entries(carDetail) as [typeof allowedCarKeys[number], unknown][]) .forEach(([key, value]) => {
+        if (!allowedCarKeys.includes(key)) return;
+        if (value !== undefined && hasActualChanges((originalValues.carDetail as any)[key], value)) {
+          (carDetailChanges as any)[key] = value;
         }
       });
     }
 
-    // If there are changes, store them as pending changes
-    if (
+    // Handle image changes
+    let imageChangeType: 'none' | 'reorder-only' | 'substantive' = 'none';
+    if (images && images.length > 0) {
+      imageChangeType = this.analyzeImageChanges(listing.carDetail.images, images);
+      
+      if (imageChangeType === 'reorder-only') {
+        // Apply image reordering immediately without admin review
+        await this.applyImageReordering(listing.carDetailId, images, userId);
+        
+        // Log the reordering action
+        await this.logsService.logListingAction(
+          userId,
+          id,
+          'image_reordered',
+          {
+            title: listing.title,
+            imageCount: images.length,
+            changeType: 'reorder_only',
+          },
+        );
+      }
+    }
+
+    // Determine if we need to create pending changes
+    const hasSubstantiveChanges = 
       Object.keys(changes).length > 0 ||
       Object.keys(carDetailChanges).length > 0 ||
-      (images && images.length > 0)
-    ) {
+      imageChangeType === 'substantive';
+
+    if (hasSubstantiveChanges) {
       const pendingChange = this.pendingChangesRepository.create({
         listingId: id,
         changedByUserId: userId,
         changes: {
           listing: changes,
           carDetail: carDetailChanges,
-          images: images || [],
+          images: imageChangeType === 'substantive' ? images : [],
         },
         originalValues: {
           listing: originalValues,
@@ -222,7 +330,16 @@ export class ListingsService {
       }
     }
 
-    return this.findOne(id);
+    const updatedListing = await this.findOne(id);
+    
+    // Add metadata about the change type for frontend
+    return {
+      ...updatedListing,
+      _metadata: {
+        imageChangeType: imageChangeType,
+        hasSubstantiveChanges: hasSubstantiveChanges,
+      }
+    } as any;
   }
 
   async remove(id: string, userId: string): Promise<{ message: string }> {
@@ -312,13 +429,13 @@ export class ListingsService {
               filename: image.filename,
               originalName: image.originalName,
               url: image.url,
-              type: (image.type as any) || 'exterior',
+              type: (image.type as ImageType) ?? ImageType.EXTERIOR,
               sortOrder: index,
               isPrimary: index === 0,
-              alt: image.alt,
+              alt: image.alt ?? null,
               carDetailId: listing.carDetailId,
-              fileSize: image.fileSize || 0,
-              mimeType: image.mimeType || 'image/jpeg',
+              fileSize: image.fileSize ?? null,
+              mimeType: image.mimeType ?? null,
             }),
           );
           await this.carImageRepository.save(carImages);
@@ -339,7 +456,7 @@ export class ListingsService {
   async rejectPendingChanges(
     pendingChangeId: string,
     rejectedByUserId: string,
-    rejectionReason?: string,
+    _rejectionReason?: string,
   ): Promise<void> {
     const pendingChange = await this.pendingChangesRepository.findOne({
       where: { id: pendingChangeId, isApplied: false },

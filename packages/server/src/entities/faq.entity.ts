@@ -11,38 +11,38 @@ import {
 @Index(['category'])
 export class FAQ {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  category: string;
+  category!: string;
 
   @Column({ type: 'text' })
-  question: string;
+  question!: string;
 
   @Column({ type: 'text' })
-  answer: string;
+  answer!: string;
 
   @Column({ type: 'float8', array: true, nullable: true })
-  embedding: number[];
+  embedding!: number[] | null;
 
   @Column({
     type: 'varchar',
     length: 10,
     default: 'en',
   })
-  language: string;
+  language!: string;
 
   @Column({
     type: 'boolean',
     default: true,
   })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({
     type: 'int',
     default: 0,
   })
-  searchCount: number;
+  searchCount!: number;
 
   @Column({
     type: 'decimal',
@@ -51,13 +51,13 @@ export class FAQ {
     default: 0,
     nullable: true,
   })
-  rating: number;
+  rating!: number | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 

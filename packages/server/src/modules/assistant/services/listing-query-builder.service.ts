@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ListingDetail } from '../../../entities/listing-detail.entity';
-import { CarDetail } from '../../../entities/car-detail.entity';
 import { ListingQueryParams } from '../dto/listing-query-params.dto';
 
 /**

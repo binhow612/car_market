@@ -11,30 +11,30 @@ import { CarModel } from './car-model.entity';
 @Entity('car_makes')
 export class CarMake {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true })
-  name: string;
+  name!: string;
 
-  @Column({ nullable: true })
-  displayName: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  displayName!: string | null;
 
-  @Column({ nullable: true })
-  logoUrl: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  logoUrl!: string | null;
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({ default: 0 })
-  sortOrder: number;
+  sortOrder!: number;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   @OneToMany(() => CarModel, (model) => model.make)
-  models: CarModel[];
+  models!: CarModel[];
 }

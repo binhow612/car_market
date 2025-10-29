@@ -160,29 +160,33 @@ export class ChromaDBService implements OnModuleInit, OnModuleDestroy {
   /**
    * Calculate cosine similarity between two vectors
    */
-  private cosineSimilarity(vecA: number[], vecB: number[]): number {
-    if (!vecA || !vecB || vecA.length !== vecB.length) {
+  private cosineSimilarity(
+    vecA: number[] | null | undefined,
+    vecB: number[] | null | undefined,
+  ): number {
+    if (!Array.isArray(vecA) || !Array.isArray(vecB) || vecA.length === 0 || vecB.length === 0) {
       return 0;
     }
+
+    const length = Math.min(vecA.length, vecB.length);
 
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
 
-    for (let i = 0; i < vecA.length; i++) {
-      dotProduct += vecA[i] * vecB[i];
-      normA += vecA[i] * vecA[i];
-      normB += vecB[i] * vecB[i];
+    for (let i = 0; i < length; i++) {
+      const a = vecA[i] ?? 0;
+      const b = vecB[i] ?? 0;
+      dotProduct += a * b;
+      normA += a * a;
+      normB += b * b;
     }
-
-    normA = Math.sqrt(normA);
-    normB = Math.sqrt(normB);
 
     if (normA === 0 || normB === 0) {
       return 0;
     }
 
-    return dotProduct / (normA * normB);
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
   /**

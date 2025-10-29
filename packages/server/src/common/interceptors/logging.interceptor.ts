@@ -243,7 +243,7 @@ export class LoggingInterceptor implements NestInterceptor {
         ? `API call failed: ${error?.message || 'Unknown error'} after ${duration}ms`
         : `API call completed successfully in ${duration}ms`;
 
-      const metadata = {
+      const metadata: Record<string, any> = {
         requestId,
         statusCode,
         duration,
@@ -278,7 +278,7 @@ export class LoggingInterceptor implements NestInterceptor {
     }
   }
 
-  private determineCategory(method: string, path: string): LogCategory {
+  private determineCategory(_method: string, path: string): LogCategory {
     // Authentication routes
     if (path.includes('/auth/')) {
       return LogCategory.AUTHENTICATION;

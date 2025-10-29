@@ -16,12 +16,17 @@ export class WsJwtGuard implements CanActivate {
         throw new WsException('Unauthorized');
       }
 
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        throw new WsException('Unauthorized');
+      }
+
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_SECRET,
+        secret,
       });
 
       // Attach user info to socket
-      client['userId'] = payload.sub || payload.userId;
+      (client as any).userId = payload.sub || payload.userId;
 
       return true;
     } catch (error) {

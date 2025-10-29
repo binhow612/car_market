@@ -34,6 +34,7 @@ import { useAuthStore } from "../store/auth";
 import { formatPrice, formatNumber, formatRelativeTime } from "../lib/utils";
 import type { ListingDetail } from "../types";
 import toast from "react-hot-toast";
+import { CommentSection } from "../components/comments/CommentSection";
 
 export function CarDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -506,6 +507,12 @@ export function CarDetailsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Comments Section */}
+        <CommentSection 
+          listingId={listing.id} 
+          listingTitle={listing.title} 
+        />
       </div>
 
       {/* Phone Number Modal */}

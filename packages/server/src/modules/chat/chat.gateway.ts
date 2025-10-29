@@ -10,7 +10,6 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
-import { UsersService } from '../users/users.service';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -18,20 +17,20 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
     credentials: true,
   },
   namespace: 'chat',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
   private userSockets: Map<string, string[]> = new Map();
 
   constructor(
     private readonly chatService: ChatService,
-    private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -193,8 +192,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private async verifyToken(token: string): Promise<string | null> {
     try {
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        return null;
+      }
+
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_SECRET,
+        secret,
       });
       return payload.sub || payload.userId;
     } catch {

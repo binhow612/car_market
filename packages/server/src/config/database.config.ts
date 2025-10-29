@@ -19,19 +19,32 @@ import { Permission } from '../entities/permission.entity';
 import { Role } from '../entities/role.entity';
 import { UserRole } from '../entities/user-role.entity';
 import { AuditLog } from '../entities/audit-log.entity';
+import { ListingComment } from '../entities/listing-comment.entity';
+import { CommentReaction } from '../entities/comment-reaction.entity';
+import { CommentReport } from '../entities/comment-report.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
   constructor(private configService: ConfigService) {}
 
   createTypeOrmOptions(): TypeOrmModuleOptions {  
+    const host = this.configService.get<string>('DATABASE_HOST', 'localhost');
+    const port = parseInt(this.configService.get<string>('DATABASE_PORT', '5432'));
+    const username = this.configService.get<string>('DATABASE_USERNAME');
+    const password = this.configService.get<string>('DATABASE_PASSWORD');
+    const database = this.configService.get<string>('DATABASE_NAME');
+
+    if (!username) throw new Error('DATABASE_USERNAME is not set');
+    if (!password) throw new Error('DATABASE_PASSWORD is not set');
+    if (!database) throw new Error('DATABASE_NAME is not set');
+
     return {
       type: 'postgres',
-      host: this.configService.get<string>('DATABASE_HOST', 'localhost'),
-      port: this.configService.get<number>('DATABASE_PORT', 5432),
-      username: this.configService.get<string>('DATABASE_USERNAME'),
-      password: this.configService.get<string>('DATABASE_PASSWORD'),
-      database: this.configService.get<string>('DATABASE_NAME'),
+      host,
+      port,
+      username,
+      password,
+      database,
       entities: [
         User,
         CarDetail,
@@ -51,6 +64,9 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         Role,
         UserRole,
         AuditLog,
+        ListingComment,
+        CommentReaction,
+        CommentReport,
       ],
       synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       logging: this.configService.get<string>('NODE_ENV') === 'development' ? ['error'] : false,

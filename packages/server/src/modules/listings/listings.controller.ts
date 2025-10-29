@@ -71,7 +71,7 @@ export class ListingsController {
     FilesInterceptor('images', 10, {
       storage: diskStorage({
         destination: './uploads/cars',
-        filename: (req, file, cb) => {
+        filename: (_req, file, cb) => {
           const randomName = Array(32)
             .fill(null)
             .map(() => Math.round(Math.random() * 16).toString(16))
@@ -79,7 +79,7 @@ export class ListingsController {
           cb(null, `${randomName}${extname(file.originalname)}`);
         },
       }),
-      fileFilter: (req, file, cb) => {
+      fileFilter: (_req, file, cb) => {
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
           return cb(new Error('Only image files are allowed!'), false);
         }
@@ -136,7 +136,7 @@ export class ListingsController {
   @UseGuards(JwtAuthGuard)
   @Put(':id/pending-changes/:changeId/reject')
   rejectPendingChanges(
-    @Param('id') id: string,
+    @Param('id') _id: string,
     @Param('changeId') changeId: string,
     @CurrentUser() user: User,
     @Body() body: { reason?: string },

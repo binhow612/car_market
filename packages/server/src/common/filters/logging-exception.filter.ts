@@ -88,7 +88,7 @@ export class LoggingExceptionFilter implements ExceptionFilter {
         request.socket?.remoteAddress;
       const userAgent = request.get('User-Agent') || 'Unknown';
 
-      const metadata = {
+      const metadata: Record<string, any> = {
         method: request.method,
         url: request.originalUrl,
         path: request.path,
@@ -114,7 +114,7 @@ export class LoggingExceptionFilter implements ExceptionFilter {
         message: `Exception: ${status} - ${message}`,
         description: `Exception occurred in ${request.method} ${request.path}: ${message}`,
         metadata,
-        ipAddress,
+        ipAddress: ipAddress || '',
         userAgent,
         userId: user?.id,
       });

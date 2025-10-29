@@ -19,35 +19,35 @@ export enum MetadataType {
 @Entity('car_metadata')
 export class CarMetadata {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({
     type: 'enum',
     enum: MetadataType,
   })
-  type: MetadataType;
+  type!: MetadataType;
 
-  @Column()
-  value: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  value!: string | null;
 
-  @Column({ nullable: true })
-  displayValue: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  displayValue!: string | null;
 
-  @Column({ nullable: true })
-  description: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  description!: string | null;
 
-  @Column({ nullable: true })
-  iconUrl: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  iconUrl!: string | null;
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({ default: 0 })
-  sortOrder: number;
+  sortOrder!: number;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

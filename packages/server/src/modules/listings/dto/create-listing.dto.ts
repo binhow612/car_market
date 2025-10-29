@@ -22,41 +22,41 @@ import { ImageType } from '../../../entities/car-image.entity';
 export class CreateCarDetailDto {
   @IsString()
   @IsNotEmpty()
-  make: string;
+  make!: string;
 
   @IsString()
   @IsNotEmpty()
-  model: string;
+  model!: string;
 
   @IsNumber()
   @Min(1900)
   @Max(new Date().getFullYear() + 1)
-  year: number;
+  year!: number;
 
   @IsEnum(BodyType)
-  bodyType: BodyType;
+  bodyType!: BodyType;
 
   @IsEnum(FuelType)
-  fuelType: FuelType;
+  fuelType!: FuelType;
 
   @IsEnum(TransmissionType)
-  transmission: TransmissionType;
+  transmission!: TransmissionType;
 
   @IsNumber()
   @Min(0)
-  engineSize: number;
+  engineSize!: number;
 
   @IsNumber()
   @Min(0)
-  enginePower: number;
+  enginePower!: number;
 
   @IsNumber()
   @Min(0)
-  mileage: number;
+  mileage!: number;
 
   @IsString()
   @IsNotEmpty()
-  color: string;
+  color!: string;
 
   @IsOptional()
   @IsNumber()
@@ -67,7 +67,7 @@ export class CreateCarDetailDto {
   numberOfSeats?: number;
 
   @IsEnum(CarCondition)
-  condition: CarCondition;
+  condition!: CarCondition;
 
   @IsOptional()
   @IsString()
@@ -94,15 +94,15 @@ export class CreateCarDetailDto {
 export class CreateCarImageDto {
   @IsString()
   @IsNotEmpty()
-  filename: string;
+  filename!: string;
 
   @IsString()
   @IsNotEmpty()
-  originalName: string;
+  originalName!: string;
 
   @IsString()
   @IsNotEmpty()
-  url: string;
+  url!: string;
 
   @IsOptional()
   @IsEnum(ImageType)
@@ -128,15 +128,15 @@ export class CreateCarImageDto {
 export class CreateListingDto {
   @IsString()
   @IsNotEmpty()
-  title: string;
+  title!: string;
 
   @IsString()
   @IsNotEmpty()
-  description: string;
+  description!: string;
 
   @IsNumber()
   @Min(0)
-  price: number;
+  price!: number;
 
   @IsOptional()
   @IsEnum(PriceType)
@@ -144,7 +144,7 @@ export class CreateListingDto {
 
   @IsString()
   @IsNotEmpty()
-  location: string;
+  location!: string;
 
   @IsOptional()
   @IsString()
@@ -160,7 +160,7 @@ export class CreateListingDto {
 
   @ValidateNested()
   @Type(() => CreateCarDetailDto)
-  carDetail: CreateCarDetailDto;
+  carDetail!: CreateCarDetailDto;
 
   @IsOptional()
   @IsArray()

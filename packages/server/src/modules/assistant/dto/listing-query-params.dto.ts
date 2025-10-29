@@ -4,8 +4,6 @@ import {
   BodyType,
   CarCondition,
 } from '../../../entities/car-detail.entity';
-import { PriceType } from '../../../entities/listing-detail.entity';
-
 /**
  * Structured parameters extracted from user query for database querying
  */

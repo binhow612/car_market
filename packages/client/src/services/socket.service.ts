@@ -1,5 +1,12 @@
 import { io, Socket } from "socket.io-client";
 import { useAuthStore } from "../store/auth";
+import type { 
+  CommentCreatedEvent, 
+  CommentUpdatedEvent, 
+  CommentDeletedEvent, 
+  CommentReactionEvent, 
+  CommentPinnedEvent 
+} from "../types/comment.types";
 
 export interface SocketMessage {
   conversationId: string;
@@ -36,6 +43,7 @@ export interface TypingStatus {
 
 class SocketService {
   private socket: Socket | null = null;
+  private commentsSocket: Socket | null = null;
   private listeners: Map<string, Function[]> = new Map();
 
   connect() {
@@ -45,30 +53,48 @@ class SocketService {
       return;
     }
 
-    if (this.socket?.connected) {
-      return;
+    // Connect to chat namespace
+    if (!this.socket?.connected) {
+      this.socket = io("http://localhost:3000/chat", {
+        query: { token },
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+      });
+
+      this.setupChatEventListeners();
     }
 
-    this.socket = io("http://localhost:3000/chat", {
-      query: { token },
-      transports: ["websocket"],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    });
+    // Connect to comments namespace
+    if (!this.commentsSocket?.connected) {
+      this.commentsSocket = io("http://localhost:3000/comments", {
+        query: { token },
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+      });
 
-    this.setupEventListeners();
+      this.setupCommentsEventListeners();
+    }
   }
 
   disconnect() {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
-      this.listeners.clear();
     }
+    
+    if (this.commentsSocket) {
+      this.commentsSocket.disconnect();
+      this.commentsSocket = null;
+    }
+    
+    this.listeners.clear();
   }
 
-  private setupEventListeners() {
+  private setupChatEventListeners() {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
@@ -115,6 +141,38 @@ class SocketService {
 
     this.socket.on("testResponse", () => {
       // Test response received
+    });
+  }
+
+  private setupCommentsEventListeners() {
+    if (!this.commentsSocket) return;
+
+    this.commentsSocket.on("connect", () => {
+      console.log("Connected to comments namespace");
+    });
+
+    this.commentsSocket.on("disconnect", () => {
+      console.log("Disconnected from comments namespace");
+    });
+
+    this.commentsSocket.on("comment:created", (data: CommentCreatedEvent) => {
+      this.emit("comment:created", data);
+    });
+
+    this.commentsSocket.on("comment:updated", (data: CommentUpdatedEvent) => {
+      this.emit("comment:updated", data);
+    });
+
+    this.commentsSocket.on("comment:deleted", (data: CommentDeletedEvent) => {
+      this.emit("comment:deleted", data);
+    });
+
+    this.commentsSocket.on("comment:reaction", (data: CommentReactionEvent) => {
+      this.emit("comment:reaction", data);
+    });
+
+    this.commentsSocket.on("comment:pinned", (data: CommentPinnedEvent) => {
+      this.emit("comment:pinned", data);
     });
   }
 
@@ -174,8 +232,29 @@ class SocketService {
     }
   }
 
+  // Comments methods
+  joinListingRoom(listingId: string) {
+    if (!this.commentsSocket?.connected) {
+      return;
+    }
+
+    this.commentsSocket.emit("join-listing", { listingId });
+  }
+
+  leaveListingRoom(listingId: string) {
+    if (!this.commentsSocket?.connected) {
+      return;
+    }
+
+    this.commentsSocket.emit("leave-listing", { listingId });
+  }
+
   isConnected(): boolean {
     return this.socket?.connected || false;
+  }
+
+  isCommentsConnected(): boolean {
+    return this.commentsSocket?.connected || false;
   }
 }
 

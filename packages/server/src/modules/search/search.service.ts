@@ -5,7 +5,6 @@ import {
   ListingDetail,
   ListingStatus,
 } from '../../entities/listing-detail.entity';
-import { CarDetail } from '../../entities/car-detail.entity';
 
 export interface SearchFilters {
   // General search query

@@ -12,39 +12,39 @@ import { CarMake } from './car-make.entity';
 @Entity('car_models')
 export class CarModel {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
-  @Column({ nullable: true })
-  displayName: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  displayName!: string;
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({ default: 0 })
-  sortOrder: number;
+  sortOrder!: number;
 
   @Column('text', { array: true, default: [] })
-  bodyStyles: string[];
+  bodyStyles!: string[];
 
-  @Column({ nullable: true })
-  defaultBodyStyle: string;
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  defaultBodyStyle!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   @ManyToOne(() => CarMake, (make) => make.models, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'makeId' })
-  make: CarMake;
+  make!: CarMake;
 
   @Column()
-  makeId: string;
+  makeId!: string;
 }

@@ -85,6 +85,7 @@ export function EditListingPage() {
   });
   const { metadata, loading: metadataLoading } = useMetadata();
 
+
   const {
     register,
     handleSubmit,
@@ -341,10 +342,22 @@ export function EditListingPage() {
         images: allImages,
       };
 
-      await ListingService.updateListing(id, updateData);
-      toast.success(
-        "✅ Your listing has been updated successfully! It will be reviewed again by our team."
-      );
+      const response = await ListingService.updateListing(id, updateData);
+      
+      // Show appropriate success message based on backend response
+      const meta = (response as any)?._metadata;
+      const isOnlyImageReordering = meta?.imageChangeType === 'reorder-only' && meta?.hasSubstantiveChanges === false;
+      
+      if (isOnlyImageReordering) {
+        toast.success(
+          "✅ Your listing images have been updated successfully! Changes are now live."
+        );
+      } else {
+        toast.success(
+          "✅ Your listing has been updated successfully! It will be reviewed again by our team."
+        );
+      }
+      
       navigate("/my-listings");
     } catch (error: any) {
       const errorMessage =

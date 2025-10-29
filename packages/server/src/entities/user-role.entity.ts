@@ -15,35 +15,35 @@ import { Role } from './role.entity';
 @Index(['userId', 'roleId'], { unique: true })
 export class UserRole {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column()
-  userId: string;
+  @Column({ type: 'uuid' })
+  userId!: string;
 
-  @Column()
-  roleId: string;
+  @Column({ type: 'uuid' })
+  roleId!: string;
 
-  @Column({ nullable: true })
-  assignedBy: string;
+  @Column({ type: 'uuid', nullable: true })
+  assignedBy!: string;
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
-  expiresAt: Date | null;
+  expiresAt!: Date | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user!: User;
 
   @ManyToOne(() => Role, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'roleId' })
-  role: Role;
+  role!: Role;
 }

@@ -4,13 +4,13 @@ import { Repository } from 'typeorm';
 import { AuditLog } from '../../entities/audit-log.entity';
 
 export interface AuditLogData {
-  userId?: string;
+  userId?: string | undefined;
   action: string;
   resource: string;
-  resourceId?: string;
-  details?: Record<string, any>;
-  ipAddress?: string;
-  userAgent?: string;
+  resourceId?: string | undefined;
+  details?: Record<string, any> | undefined;
+  ipAddress?: string | undefined;
+  userAgent?: string | undefined;
 }
 
 @Injectable()
@@ -24,17 +24,20 @@ export class AuditService {
    * Log an audit event
    */
   async log(data: AuditLogData): Promise<AuditLog> {
-    const auditLog = this.auditLogRepository.create({
-      userId: data.userId,
+    const auditLogData: any = {
       action: data.action,
       resource: data.resource,
-      resourceId: data.resourceId,
-      details: data.details,
-      ipAddress: data.ipAddress,
-      userAgent: data.userAgent,
-    });
+    };
 
-    return await this.auditLogRepository.save(auditLog);
+    if (data.userId !== undefined) auditLogData.userId = data.userId;
+    if (data.resourceId !== undefined) auditLogData.resourceId = data.resourceId;
+    if (data.details !== undefined) auditLogData.details = data.details;
+    if (data.ipAddress !== undefined) auditLogData.ipAddress = data.ipAddress;
+    if (data.userAgent !== undefined) auditLogData.userAgent = data.userAgent;
+
+    const auditLog = this.auditLogRepository.create(auditLogData);
+    const savedLog = await this.auditLogRepository.save(auditLog);
+    return Array.isArray(savedLog) ? savedLog[0]! : savedLog!;
   }
 
   /**
@@ -51,9 +54,9 @@ export class AuditService {
       userId,
       action,
       resource: 'AUTH',
-      details,
-      ipAddress,
-      userAgent,
+      details: details || undefined,
+      ipAddress: ipAddress || undefined,
+      userAgent: userAgent || undefined,
     });
   }
 
@@ -74,8 +77,8 @@ export class AuditService {
       resource: 'USER',
       resourceId: targetUserId,
       details,
-      ipAddress,
-      userAgent,
+      ipAddress: ipAddress || undefined,
+      userAgent: userAgent || undefined,
     });
   }
 
@@ -96,9 +99,9 @@ export class AuditService {
       action,
       resource,
       resourceId,
-      details,
-      ipAddress,
-      userAgent,
+      details: details || undefined,
+      ipAddress: ipAddress || undefined,
+      userAgent: userAgent || undefined,
     });
   }
 
@@ -118,10 +121,10 @@ export class AuditService {
       userId,
       action,
       resource,
-      resourceId,
-      details,
-      ipAddress,
-      userAgent,
+      resourceId: resourceId || undefined,
+      details: details || undefined,
+      ipAddress: ipAddress || undefined,
+      userAgent: userAgent || undefined,
     });
   }
 

@@ -13,29 +13,29 @@ import {
 @Index(['createdAt'])
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column({ nullable: true })
-  userId: string;
+  @Column({ type: 'uuid', nullable: true })
+  userId!: string | null;
 
-  @Column()
-  action: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  action!: string | null;
 
-  @Column()
-  resource: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  resource!: string | null;
 
-  @Column({ nullable: true })
-  resourceId: string;
+  @Column({ type: 'uuid', nullable: true })
+  resourceId!: string | null;
 
   @Column({ type: 'json', nullable: true })
-  details: Record<string, any>;
+  details!: Record<string, any> | null;
 
-  @Column({ nullable: true })
-  ipAddress: string;
+  @Column({ type: 'varchar', length: 45, nullable: true })
+  ipAddress!: string | null;
 
-  @Column({ nullable: true })
-  userAgent: string;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  userAgent!: string | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }

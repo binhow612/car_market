@@ -20,8 +20,8 @@ export interface SuggestionChip {
 }
 
 export class AssistantResponseDto {
-  intent: UserIntent | null;
-  message: string;
+  intent!: UserIntent | null;
+  message!: string;
   data?: any;
   suggestions?: SuggestionChip[];
   actions?: MessageAction[];

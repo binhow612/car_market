@@ -29,59 +29,59 @@ export enum PaymentMethod {
 @Entity('transactions')
 export class Transaction {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true })
-  transactionNumber: string; // e.g., TXN-2024-001
+  transactionNumber!: string; // e.g., TXN-2024-001
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
-  amount: number;
+  amount!: number;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
-  platformFee: number;
+  platformFee!: number;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
-  totalAmount: number;
+  totalAmount!: number;
 
   @Column({
     type: 'enum',
     enum: TransactionStatus,
     default: TransactionStatus.PENDING,
   })
-  status: TransactionStatus;
+  status!: TransactionStatus;
 
   @Column({
     type: 'enum',
     enum: PaymentMethod,
   })
-  paymentMethod: PaymentMethod;
+  paymentMethod!: PaymentMethod;
 
-  @Column({ nullable: true })
-  paymentReference: string; // External payment gateway reference
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  paymentReference!: string; // External payment gateway reference
 
   @Column('text', { nullable: true })
-  notes: string;
+  notes!: string;
 
-  @Column({ nullable: true })
-  meetingLocation: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  meetingLocation!: string;
 
-  @Column({ nullable: true })
-  scheduledMeetingDate: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  scheduledMeetingDate!: Date;
 
-  @Column({ nullable: true })
-  completedAt: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  completedAt!: Date;
 
-  @Column({ nullable: true })
-  cancelledAt: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  cancelledAt!: Date;
 
-  @Column({ nullable: true })
-  cancellationReason: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  cancellationReason!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   // Note: No buyer relationship for offline marketplace - buyers and sellers contact directly
@@ -90,19 +90,19 @@ export class Transaction {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'sellerId' })
-  seller: User;
+  seller!: User;
 
   @Column()
-  sellerId: string;
+  sellerId!: string;
 
   @ManyToOne(() => ListingDetail, (listing) => listing.transactions, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'listingId' })
-  listing: ListingDetail;
+  listing!: ListingDetail;
 
   @Column()
-  listingId: string;
+  listingId!: string;
 
   // Virtual properties
   get isPending(): boolean {

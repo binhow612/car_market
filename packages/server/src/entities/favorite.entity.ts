@@ -14,27 +14,27 @@ import { ListingDetail } from './listing-detail.entity';
 @Unique(['userId', 'listingId'])
 export class Favorite {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   // Relationships
   @ManyToOne(() => User, (user) => user.id, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user!: User;
 
-  @Column()
-  userId: string;
+  @Column({ type: 'uuid' })
+  userId!: string;
 
   @ManyToOne(() => ListingDetail, (listing) => listing.id, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'listingId' })
-  listing: ListingDetail;
+  listing!: ListingDetail;
 
-  @Column()
-  listingId: string;
+  @Column({ type: 'uuid' })
+  listingId!: string;
 }

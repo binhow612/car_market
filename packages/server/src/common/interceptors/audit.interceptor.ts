@@ -27,7 +27,7 @@ export class AuditInterceptor implements NestInterceptor {
         const statusCode = response.statusCode;
 
         // Only log significant actions
-        if (this.shouldLog(method, url, statusCode)) {
+        if (this.shouldLog(method, url)) {
           try {
             await this.auditService.log({
               userId: user?.id,
@@ -52,7 +52,7 @@ export class AuditInterceptor implements NestInterceptor {
     );
   }
 
-  private shouldLog(method: string, url: string, statusCode: number): boolean {
+  private shouldLog(method: string, url: string): boolean {
     // Log all non-GET requests and important GET requests
     if (method !== 'GET') {
       return true;
@@ -70,8 +70,8 @@ export class AuditInterceptor implements NestInterceptor {
       PUT: 'UPDATE',
       PATCH: 'UPDATE',
       DELETE: 'DELETE',
-    };
-    return actionMap[method] || 'UNKNOWN';
+    } as const;
+    return actionMap[method as keyof typeof actionMap] ?? 'UNKNOWN';
   }
 
   private getResourceFromUrl(url: string): string {

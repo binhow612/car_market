@@ -26,35 +26,35 @@ export enum OAuthProvider {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true })
-  email: string;
+  email!: string;
 
   @Column()
   @Exclude()
   password?: string;
 
   @Column()
-  firstName: string;
+  firstName!: string;
 
   @Column()
-  lastName: string;
+  lastName!: string;
 
-  @Column({ nullable: true })
-  phoneNumber: string;
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  phoneNumber!: string;
 
-  @Column({ nullable: true })
-  profileImage: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  profileImage!: string;
 
   @Column({ nullable: true, type: 'text' })
-  bio: string;
+  bio!: string;
 
-  @Column({ nullable: true })
-  location: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  location!: string;
 
   @Column({ nullable: true, type: 'date' })
-  dateOfBirth: Date;
+  dateOfBirth!: Date;
 
   @Column({
     type: 'enum',
@@ -65,45 +65,45 @@ export class User {
   role?: LegacyUserRole;
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({ default: false })
-  isEmailVerified: boolean;
+  isEmailVerified!: boolean;
 
-  @Column({ nullable: true })
-  emailVerificationToken: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  emailVerificationToken!: string;
 
-  @Column({ nullable: true })
-  passwordResetToken?: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  passwordResetToken!: string | null;
 
-  @Column({ nullable: true })
-  passwordResetExpires?: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  passwordResetExpires!: Date | null;
 
   @Column({
     type: 'enum',
     enum: OAuthProvider,
     default: OAuthProvider.LOCAL,
   })
-  provider: OAuthProvider;
+  provider!: OAuthProvider;
 
-  @Column({ nullable: true })
-  providerId: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  providerId!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   @OneToMany(() => ListingDetail, (listing) => listing.seller)
-  listings: ListingDetail[];
+  listings!: ListingDetail[];
 
   @OneToMany(() => Transaction, (transaction) => transaction.seller)
-  sales: Transaction[];
+  sales!: Transaction[];
 
   @OneToMany(() => UserRole, (userRole) => userRole.user)
-  userRoles: UserRole[];
+  userRoles!: UserRole[];
 
   // Virtual properties
   get fullName(): string {

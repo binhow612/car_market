@@ -1,13 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import OpenAI from 'openai';
 import { ListingDetail, ListingStatus } from '../../../entities/listing-detail.entity';
 import {
   CarComparisonData,
   CarInventoryItem,
   ComparisonCategory,
-  ComparisonAttribute,
   ComparisonSummary,
   ComparisonQueryResult,
 } from '../dto/car-comparison.dto';
@@ -326,7 +325,7 @@ Examples:
             winner: this.determineMileageWinner(
               car1.specs.mileage,
               car2.specs.mileage,
-            ),
+            ) || 'tie',
             icon: '📊',
           },
           {
@@ -336,7 +335,7 @@ Examples:
             winner: this.determineOwnersWinner(
               car1.specs.previousOwners,
               car2.specs.previousOwners,
-            ),
+            ) || 'tie',
             icon: '👥',
           },
           {
@@ -346,7 +345,7 @@ Examples:
             winner: this.determineBooleanWinner(
               car1.specs.hasServiceHistory,
               car2.specs.hasServiceHistory,
-            ),
+            ) || 'tie',
             icon: '🔧',
           },
           {
@@ -356,7 +355,7 @@ Examples:
             winner: this.determineAccidentWinner(
               car1.specs.hasAccidentHistory,
               car2.specs.hasAccidentHistory,
-            ),
+            ) || 'tie',
             icon: '⚠️',
           },
         ],
@@ -393,7 +392,7 @@ Examples:
   async generateComparisonSummary(
     car1: CarInventoryItem | null,
     car2: CarInventoryItem | null,
-    comparisonTable: ComparisonCategory[],
+    _comparisonTable: ComparisonCategory[],
   ): Promise<ComparisonSummary> {
     if (!car1 || !car2) {
       return {
@@ -695,12 +694,12 @@ Keep advantages concise (4-8 words each).`;
     );
 
     // Step 3: Select best match for each car (most recent, best condition)
-    const car1 = car1Matches.length > 0
-      ? this.convertToInventoryItem(car1Matches[0])
+    const car1 = car1Matches.length > 0 && car1Matches[0]
+      ? this.convertToInventoryItem(car1Matches[0])!
       : null;
 
-    const car2 = car2Matches.length > 0
-      ? this.convertToInventoryItem(car2Matches[0])
+    const car2 = car2Matches.length > 0 && car2Matches[0]
+      ? this.convertToInventoryItem(car2Matches[0])!
       : null;
 
     // Step 4: Build comparison table

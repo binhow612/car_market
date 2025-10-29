@@ -27,7 +27,7 @@ export interface CarInventoryItem {
   listingId: string;
   carDetailId: string;
   price: number;
-  location: string;
+  location: string | null;
   city: string | null;
   status: string;
   sellerId: string;

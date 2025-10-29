@@ -32,119 +32,119 @@ export enum PriceType {
 @Entity('listing_details')
 export class ListingDetail {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  title: string;
+  title!: string;
 
   @Column('text')
-  description: string;
+  description!: string;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
-  price: number;
+  price!: number;
 
   @Column({
     type: 'enum',
     enum: PriceType,
     default: PriceType.NEGOTIABLE,
   })
-  priceType: PriceType;
+  priceType!: PriceType;
 
   @Column({
     type: 'enum',
     enum: ListingStatus,
     default: ListingStatus.DRAFT,
   })
-  status: ListingStatus;
+  status!: ListingStatus;
 
-  @Column()
-  location: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  location!: string | null;
 
-  @Column({ nullable: true })
-  city: string;
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  city!: string;
 
-  @Column({ nullable: true })
-  state: string;
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  state!: string;
 
-  @Column({ nullable: true })
-  country: string;
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  country!: string;
 
-  @Column({ nullable: true })
-  postalCode: string;
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  postalCode!: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
-  latitude: number;
+  latitude!: number;
 
   @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
-  longitude: number;
+  longitude!: number;
 
   @Column({ default: 0 })
-  viewCount: number;
+  viewCount!: number;
 
   @Column({ default: 0 })
-  favoriteCount: number;
+  favoriteCount!: number;
 
   @Column({ default: 0 })
-  inquiryCount: number;
+  inquiryCount!: number;
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({ default: false })
-  isFeatured: boolean;
+  isFeatured!: boolean;
 
   @Column({ default: false })
-  isUrgent: boolean;
+  isUrgent!: boolean;
 
-  @Column({ nullable: true })
-  expiresAt: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  expiresAt!: Date;
 
-  @Column({ nullable: true })
-  approvedAt: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  approvedAt!: Date;
 
-  @Column({ nullable: true })
-  rejectedAt: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  rejectedAt!: Date;
 
-  @Column({ nullable: true })
-  rejectionReason: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  rejectionReason!: string;
 
-  @Column({ nullable: true })
-  soldAt: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  soldAt!: Date;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   @ManyToOne(() => User, (user) => user.listings, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'sellerId' })
-  seller: User;
+  seller!: User;
 
   @Column()
-  sellerId: string;
+  sellerId!: string;
 
   @OneToOne(() => CarDetail, (carDetail) => carDetail.listing, {
     cascade: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'carDetailId' })
-  carDetail: CarDetail;
+  carDetail!: CarDetail;
 
   @Column()
-  carDetailId: string;
+  carDetailId!: string;
 
   @OneToMany(() => Transaction, (transaction) => transaction.listing)
-  transactions: Transaction[];
+  transactions!: Transaction[];
 
   @OneToMany(
     () => ListingPendingChanges,
     (pendingChange) => pendingChange.listing,
   )
-  pendingChanges: ListingPendingChanges[];
+  pendingChanges!: ListingPendingChanges[];
 
   // Virtual properties
   get isExpired(): boolean {

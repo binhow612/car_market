@@ -18,40 +18,40 @@ export enum MessageType {
 @Entity('chat_messages')
 export class ChatMessage {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('text')
-  content: string;
+  content!: string;
 
   @Column({
     type: 'enum',
     enum: MessageType,
     default: MessageType.TEXT,
   })
-  type: MessageType;
+  type!: MessageType;
 
   @Column({ default: false })
-  isRead: boolean;
+  isRead!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   // Relationships
   @ManyToOne(() => User, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'senderId' })
-  sender: User;
+  sender!: User;
 
-  @Column()
-  senderId: string;
+  @Column({ type: 'uuid' })
+  senderId!: string;
 
   @ManyToOne(() => ChatConversation, (conversation) => conversation.messages, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'conversationId' })
-  conversation: ChatConversation;
+  conversation!: ChatConversation;
 
-  @Column()
-  conversationId: string;
+  @Column({ type: 'uuid' })
+  conversationId!: string;
 }

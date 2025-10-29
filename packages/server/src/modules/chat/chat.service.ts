@@ -5,14 +5,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, In } from 'typeorm';
+import { Server } from 'socket.io';
 import { ChatConversation } from '../../entities/chat-conversation.entity';
 import { ChatMessage, MessageType } from '../../entities/chat-message.entity';
 import { ListingDetail } from '../../entities/listing-detail.entity';
-import { Server as SocketIOServer } from 'socket.io';
-
 @Injectable()
 export class ChatService {
-  private io: SocketIOServer | null = null;
+  private io!: Server;
 
   constructor(
     @InjectRepository(ChatConversation)
@@ -23,7 +22,7 @@ export class ChatService {
     private readonly listingRepository: Repository<ListingDetail>,
   ) {}
 
-  setSocketIO(io: SocketIOServer) {
+  setSocketIO(io: Server) {
     this.io = io;
   }
 

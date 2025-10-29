@@ -19,49 +19,49 @@ export enum ImageType {
 @Entity('car_images')
 export class CarImage {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  filename: string;
+  filename!: string;
 
   @Column()
-  originalName: string;
+  originalName!: string;
 
   @Column()
-  url: string;
+  url!: string;
 
   @Column({
     type: 'enum',
     enum: ImageType,
     default: ImageType.EXTERIOR,
   })
-  type: ImageType;
+  type!: ImageType;
 
   @Column({ default: 0 })
-  sortOrder: number;
+  sortOrder!: number;
 
   @Column({ default: false })
-  isPrimary: boolean;
+  isPrimary!: boolean;
 
-  @Column({ nullable: true })
-  fileSize: number; // in bytes
+  @Column({ type: 'bigint', nullable: true })
+  fileSize!: number | null; // in bytes
 
-  @Column({ nullable: true })
-  mimeType: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  mimeType!: string | null;
 
-  @Column({ nullable: true })
-  alt: string; // Alt text for accessibility
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  alt!: string | null; // Alt text for accessibility
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   // Relationships
   @ManyToOne(() => CarDetail, (carDetail) => carDetail.images, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'carDetailId' })
-  carDetail: CarDetail;
+  carDetail!: CarDetail;
 
   @Column()
-  carDetailId: string;
+  carDetailId!: string;
 }

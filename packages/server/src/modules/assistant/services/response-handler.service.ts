@@ -1,11 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository } from 'typeorm';
 import OpenAI from 'openai';
 import { ListingDetail } from '../../../entities/listing-detail.entity';
-import { CarMetadata } from '../../../entities/car-metadata.entity';
-import { CarMake } from '../../../entities/car-make.entity';
-import { CarModel } from '../../../entities/car-model.entity';
+// Removed unused imports: CarMetadata, CarMake, CarModel
 import {
   UserIntent,
   AssistantResponseDto,
@@ -27,12 +25,6 @@ export class ResponseHandlerService {
   constructor(
     @InjectRepository(ListingDetail)
     private readonly listingRepository: Repository<ListingDetail>,
-    @InjectRepository(CarMetadata)
-    private readonly metadataRepository: Repository<CarMetadata>,
-    @InjectRepository(CarMake)
-    private readonly makeRepository: Repository<CarMake>,
-    @InjectRepository(CarModel)
-    private readonly modelRepository: Repository<CarModel>,
     private readonly queryExtractionService: QueryExtractionService,
     private readonly listingQueryBuilderService: ListingQueryBuilderService,
     private readonly userContextService: UserContextService,
@@ -69,7 +61,7 @@ export class ResponseHandlerService {
 
   private async handleCarSpecs(
     userQuery: string,
-    extractedEntities: any,
+    _extractedEntities: any,
   ): Promise<AssistantResponseDto> {
     try {
       // Get car details for context (from listings)
@@ -146,7 +138,7 @@ Be conversational and helpful.`;
 
   private async handleCarListing(
     userQuery: string,
-    extractedEntities: any,
+    _extractedEntities: any,
   ): Promise<AssistantResponseDto> {
     try {
       this.logger.log(`Processing car_listing query: "${userQuery}"`);
@@ -301,8 +293,11 @@ Generate a friendly response summarizing these results.`;
     let message = `Great news! I found ${totalCount} car${totalCount > 1 ? 's' : ''} matching your criteria. `;
 
     if (listings.length > 0) {
-      const firstCar = listings[0].carDetail;
-      message += `The top result is a ${firstCar.year} ${firstCar.make} ${firstCar.model} for $${listings[0].price.toLocaleString()}. `;
+      const firstListing = listings[0];
+      const firstCar = firstListing?.carDetail;
+      if (firstListing && firstCar) {
+        message += `The top result is a ${firstCar.year} ${firstCar.make} ${firstCar.model} for $${firstListing.price.toLocaleString()}. `;
+      }
     }
 
     if (totalCount > listings.length) {
@@ -320,7 +315,7 @@ Generate a friendly response summarizing these results.`;
   private generateContextualSuggestions(
     listings: ListingDetail[],
     extractedParams: any,
-    totalCount: number,
+    _totalCount: number,
   ): SuggestionChip[] {
     const suggestions: SuggestionChip[] = [];
 
@@ -578,7 +573,7 @@ Remember: You're helping users navigate CarMarket, a platform for buying and sel
    * Generate fallback FAQ response without LLM
    */
   private generateFallbackFAQResponse(
-    userQuery: string,
+    _userQuery: string,
     topFAQs: any[],
   ): string {
     if (topFAQs.length === 0) {
@@ -593,7 +588,7 @@ Remember: You're helping users navigate CarMarket, a platform for buying and sel
   /**
    * Generate contextual suggestions based on retrieved FAQs
    */
-  private generateFAQSuggestions(topFAQs: any[], userQuery: string): SuggestionChip[] {
+  private generateFAQSuggestions(topFAQs: any[], _userQuery: string): SuggestionChip[] {
     const suggestions: SuggestionChip[] = [];
 
     // If we have relevant FAQs, suggest related questions
@@ -659,7 +654,7 @@ Remember: You're helping users navigate CarMarket, a platform for buying and sel
 
     // Check FAQ categories and questions to determine relevant actions
     const categories = topFAQs.map(r => r.faq.category.toLowerCase());
-    const questions = topFAQs.map(r => r.faq.question.toLowerCase()).join(' ');
+    // Precompute questions if needed in future; not used currently
 
     // Action: Browse cars
     if (
@@ -729,7 +724,7 @@ Remember: You're helping users navigate CarMarket, a platform for buying and sel
 
   private async handleCarCompare(
     userQuery: string,
-    extractedEntities: any,
+    _extractedEntities: any,
   ): Promise<AssistantResponseDto> {
     try {
       this.logger.log(`Processing car_compare query: "${userQuery}"`);
@@ -913,7 +908,7 @@ ${inventoryStatus ? 'IMPORTANT: Mention that we have some of these models in sto
   /**
    * Fallback comparison message
    */
-  private generateFallbackComparisonMessage(userQuery: string): string {
+  private generateFallbackComparisonMessage(_userQuery: string): string {
     return `I'd be happy to help you compare these cars! Based on your query, I can provide a detailed comparison covering performance, features, pricing, and overall value. Unfortunately, I don't have both models currently in our inventory, but I can still give you expert insights to help you make an informed decision. Would you like to see what similar cars we have available?`;
   }
 

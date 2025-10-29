@@ -15,6 +15,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { LogsModule } from './modules/logs/logs.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
 import { RbacModule } from './modules/rbac/rbac.module';
+import { CommentsModule } from './modules/comments/comments.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { RbacModule } from './modules/rbac/rbac.module';
     LogsModule,
     AssistantModule,
     RbacModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -22,13 +22,23 @@ import { AuditLog } from '../entities/audit-log.entity';
 // Load environment variables
 config();
 
+const dbHost = process.env.DATABASE_HOST || 'localhost';
+const dbPort = parseInt(process.env.DATABASE_PORT || '5432');
+const dbUser = process.env.DATABASE_USERNAME;
+const dbPass = process.env.DATABASE_PASSWORD;
+const dbName = process.env.DATABASE_NAME;
+
+if (!dbUser) throw new Error('DATABASE_USERNAME is not set');
+if (!dbPass) throw new Error('DATABASE_PASSWORD is not set');
+if (!dbName) throw new Error('DATABASE_NAME is not set');
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DATABASE_HOST || 'localhost',
-  port: parseInt(process.env.DATABASE_PORT || '5432'),
-  username: process.env.DATABASE_USERNAME,
-  password: process.env.DATABASE_PASSWORD,
-  database: process.env.DATABASE_NAME,
+  host: dbHost,
+  port: dbPort,
+  username: dbUser,
+  password: dbPass,
+  database: dbName,
   entities: [
     User,
     CarDetail,

@@ -2,13 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile } from 'passport-facebook';
-import { AuthService } from '../auth.service';
+// Removed unused AuthService import
 
 @Injectable()
 export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
   constructor(
-    private readonly configService: ConfigService,
-    private readonly authService: AuthService,
+    configService: ConfigService,
   ) {
     super({
       clientID: configService.get<string>('FACEBOOK_APP_ID')!,
@@ -19,8 +18,8 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
   }
 
   async validate(
-    accessToken: string,
-    refreshToken: string,
+    _accessToken: string,
+    _refreshToken: string,
     profile: Profile,
     done: (error: any, user?: any) => void,
   ): Promise<any> {

@@ -17,54 +17,54 @@ import { ChatMessage } from './chat-message.entity';
 @Unique(['buyerId', 'sellerId', 'listingId'])
 export class ChatConversation {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column({ nullable: true })
-  lastMessage: string;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  lastMessage!: string;
 
-  @Column({ nullable: true })
-  lastMessageAt: Date;
-
-  @Column({ default: false })
-  isBuyerTyping: boolean;
+  @Column({ type: 'timestamptz', nullable: true })
+  lastMessageAt!: Date;
 
   @Column({ default: false })
-  isSellerTyping: boolean;
+  isBuyerTyping!: boolean;
+
+  @Column({ default: false })
+  isSellerTyping!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   @ManyToOne(() => User, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'buyerId' })
-  buyer: User;
+  buyer!: User;
 
-  @Column()
-  buyerId: string;
+  @Column({ type: 'uuid' })
+  buyerId!: string;
 
   @ManyToOne(() => User, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'sellerId' })
-  seller: User;
+  seller!: User;
 
-  @Column()
-  sellerId: string;
+  @Column({ type: 'uuid' })
+  sellerId!: string;
 
   @ManyToOne(() => ListingDetail, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'listingId' })
-  listing: ListingDetail;
+  listing!: ListingDetail;
 
-  @Column()
-  listingId: string;
+  @Column({ type: 'uuid' })
+  listingId!: string;
 
   @OneToMany(() => ChatMessage, (message) => message.conversation)
-  messages: ChatMessage[];
+  messages!: ChatMessage[];
 }

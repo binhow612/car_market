@@ -29,57 +29,57 @@ export enum LogCategory {
 @Entity('activity_logs')
 export class ActivityLog {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({
     type: 'enum',
     enum: LogLevel,
     default: LogLevel.INFO,
   })
-  level: LogLevel;
+  level!: LogLevel;
 
   @Column({
     type: 'enum',
     enum: LogCategory,
   })
-  category: LogCategory;
+  category!: LogCategory;
 
-  @Column()
-  message: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  message!: string | null;
 
   @Column('text', { nullable: true })
-  description: string;
+  description!: string | null;
 
   @Column('jsonb', { nullable: true })
-  metadata: Record<string, any>;
+  metadata!: Record<string, any> | null;
 
-  @Column({ nullable: true })
-  ipAddress: string;
+  @Column({ type: 'varchar', length: 45, nullable: true })
+  ipAddress!: string | null;
 
-  @Column({ nullable: true })
-  userAgent: string;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  userAgent!: string | null;
 
-  @Column({ nullable: true })
-  userId: string;
+  @Column({ type: 'uuid', nullable: true })
+  userId!: string | null;
 
-  @Column({ nullable: true })
-  targetUserId: string;
+  @Column({ type: 'uuid', nullable: true })
+  targetUserId!: string | null;
 
-  @Column({ nullable: true })
-  listingId: string;
+  @Column({ type: 'uuid', nullable: true })
+  listingId!: string | null;
 
-  @Column({ nullable: true })
-  conversationId: string;
+  @Column({ type: 'uuid', nullable: true })
+  conversationId!: string | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   // Relationships
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user!: User | null;
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'targetUserId' })
-  targetUser: User;
+  targetUser!: User | null;
 }

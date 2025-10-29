@@ -88,11 +88,16 @@ export class MetadataService {
 
   // Admin methods for managing metadata
   async createMake(name: string, displayName?: string, logoUrl?: string) {
-    const make = this.carMakeRepository.create({
+    const makeData: any = {
       name: name.toLowerCase(),
       displayName: displayName || name,
-      logoUrl,
-    });
+    };
+    
+    if (logoUrl !== undefined) {
+      makeData.logoUrl = logoUrl;
+    }
+    
+    const make = this.carMakeRepository.create(makeData);
     return this.carMakeRepository.save(make);
   }
 
@@ -120,13 +125,17 @@ export class MetadataService {
     displayValue?: string,
     description?: string,
   ) {
-    const metadata = this.carMetadataRepository.create({
+    const metadataData: any = {
       type,
       value: value.toLowerCase(),
       displayValue: displayValue || value,
-      description,
-    });
-
+    };
+    
+    if (description !== undefined) {
+      metadataData.description = description;
+    }
+    
+    const metadata = this.carMetadataRepository.create(metadataData);
     return this.carMetadataRepository.save(metadata);
   }
 

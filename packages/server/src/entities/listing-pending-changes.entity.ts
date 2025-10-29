@@ -13,48 +13,48 @@ import { User } from './user.entity';
 @Entity('listing_pending_changes')
 export class ListingPendingChanges {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  listingId: string;
+  listingId!: string;
 
   @Column()
-  changedByUserId: string;
+  changedByUserId!: string;
 
   @Column('jsonb')
-  changes: Record<string, any>; // Store the changed fields and their new values
+  changes!: Record<string, any>; // Store the changed fields and their new values
 
   @Column('jsonb', { nullable: true })
-  originalValues: Record<string, any>; // Store the original values for comparison
+  originalValues!: Record<string, any> | null; // Store the original values for comparison
 
   @Column({ default: false })
-  isApplied: boolean; // Whether these changes have been applied after approval
+  isApplied!: boolean; // Whether these changes have been applied after approval
+
+  @Column({ type: 'timestamptz', nullable: true })
+  appliedAt!: Date | null;
 
   @Column({ nullable: true })
-  appliedAt: Date;
-
-  @Column({ nullable: true })
-  appliedByUserId: string;
+  appliedByUserId!: string | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relationships
   @ManyToOne(() => ListingDetail, (listing) => listing.pendingChanges, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'listingId' })
-  listing: ListingDetail;
+  listing!: ListingDetail;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'changedByUserId' })
-  changedBy: User;
+  changedBy!: User;
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'appliedByUserId' })
-  appliedBy: User;
+  appliedBy!: User | null;
 }
 

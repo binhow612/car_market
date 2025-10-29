@@ -68,13 +68,13 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  async getProfile(@Request() req): Promise<User> {
+  async getProfile(@Request() req: any): Promise<User> {
     return this.authService.findById(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getMe(@Request() req): Promise<User> {
+  async getMe(@Request() req: any): Promise<User> {
     return this.authService.findById(req.user.id);
   }
 
@@ -101,7 +101,7 @@ export class AuthController {
     message: 'Google OAuth Login',
     description: 'User logged in via Google OAuth',
   })
-  async googleAuthCallback(@Request() req, @Res() res) {
+  async googleAuthCallback(@Request() req: any, @Res() res: any) {
     try {
       const authResponse = await this.authService.validateOAuthUser(req.user, OAuthProvider.GOOGLE);
       
@@ -135,7 +135,7 @@ export class AuthController {
     message: 'Facebook OAuth Login',
     description: 'User logged in via Facebook OAuth',
   })
-  async facebookAuthCallback(@Request() req): Promise<AuthResponse> {
+  async facebookAuthCallback(@Request() req: any): Promise<AuthResponse> {
     return this.authService.validateOAuthUser(req.user, OAuthProvider.FACEBOOK);
   }
 }

@@ -221,19 +221,30 @@ export class AdminService {
       throw new NotFoundException('Listing not found');
     }
 
-    await this.listingRepository.update(listingId, {
+    const rejectUpdate: any = {
       status: ListingStatus.REJECTED,
       rejectedAt: new Date(),
-      rejectionReason: reason,
-    });
+    };
+    if (reason !== undefined) {
+      rejectUpdate.rejectionReason = reason;
+    }
+    await this.listingRepository.update(listingId, rejectUpdate);
 
     // Log the rejection action
-    await this.logsService.createLog({
+    const logPayload: {
+      level: LogLevel;
+      category: LogCategory;
+      message: string;
+      description: string;
+      listingId: string;
+      targetUserId: string;
+      metadata: Record<string, any>;
+      userId?: string;
+    } = {
       level: LogLevel.WARNING,
       category: LogCategory.ADMIN_ACTION,
       message: 'Listing rejected by admin',
       description: `Listing "${listing.title}" has been rejected${reason ? ` with reason: ${reason}` : ''}`,
-      userId: adminUserId,
       listingId: listingId,
       targetUserId: listing.sellerId,
       metadata: {
@@ -241,7 +252,13 @@ export class AdminService {
         sellerEmail: listing.seller?.email,
         rejectionReason: reason,
       },
-    });
+    };
+
+    if (adminUserId !== undefined) {
+      logPayload.userId = adminUserId;
+    }
+
+    await this.logsService.createLog(logPayload);
 
     return { message: 'Listing rejected successfully' };
   }
@@ -436,7 +453,7 @@ export class AdminService {
     return user;
   }
 
-  async updateUserStatus(id: string, isActive: boolean, reason?: string) {
+  async updateUserStatus(id: string, isActive: boolean, _reason?: string) {
     const user = await this.userRepository.findOne({
       where: { id },
     });
@@ -611,43 +628,11 @@ export class AdminService {
         return { message: 'RBAC data already exists', success: true };
       }
 
-      // Create basic permissions
-      const permissions = [
-        { name: 'admin:users', description: 'Manage users', action: 'MANAGE', resource: 'USER' },
-        { name: 'admin:listings', description: 'Manage listings', action: 'MANAGE', resource: 'LISTING' },
-        { name: 'admin:logs', description: 'View audit logs', action: 'READ', resource: 'LOGS' },
-        { name: 'admin:system', description: 'System administration', action: 'MANAGE', resource: 'SYSTEM' },
-        { name: 'user:profile', description: 'Manage own profile', action: 'MANAGE', resource: 'USER' },
-        { name: 'user:listings', description: 'Manage own listings', action: 'MANAGE', resource: 'LISTING' },
-      ];
+      // Create basic permissions (placeholder for future seeding)
+      // Removed unused variable to satisfy linter
 
-      // Create roles
-      const roles = [
-        {
-          name: 'super_admin',
-          description: 'Super Administrator with full system access',
-          isSystem: true,
-          priority: 100,
-        },
-        {
-          name: 'admin',
-          description: 'Administrator with management access',
-          isSystem: true,
-          priority: 90,
-        },
-        {
-          name: 'moderator',
-          description: 'Moderator with limited admin access',
-          isSystem: true,
-          priority: 80,
-        },
-        {
-          name: 'user',
-          description: 'Regular user with basic permissions',
-          isSystem: true,
-          priority: 10,
-        },
-      ];
+      // Create roles (placeholder for future seeding)
+      // Removed unused variable to satisfy linter
 
       return { message: 'RBAC data seeded successfully', success: true };
     } catch (error) {

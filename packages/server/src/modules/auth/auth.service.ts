@@ -42,14 +42,16 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Create new user
-    const user = this.userRepository.create({
+    const userData = {
       email,
       password: hashedPassword,
       firstName,
       lastName,
-      phoneNumber,
       role: LegacyUserRole.USER,
-    });
+      ...(phoneNumber ? { phoneNumber } : {}),
+    } as const;
+
+    const user = this.userRepository.create(userData);
 
     const savedUser = await this.userRepository.save(user);
 
@@ -197,8 +199,8 @@ export class AuthService {
     // Update user password and clear reset token
     await this.userRepository.update(user.id, {
       password: hashedPassword,
-      passwordResetToken: undefined,
-      passwordResetExpires: undefined,
+      passwordResetToken: null as any,
+      passwordResetExpires: null as any,
     });
 
     return { message: 'Password has been reset successfully' };
