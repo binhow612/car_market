@@ -362,10 +362,6 @@ export class ListingsService {
       listing.carDetail.videos.sort((a, b) => a.sortOrder - b.sortOrder);
     }
 
-    if (!listing) {
-      throw new NotFoundException('Listing not found');
-    }
-
     if (listing.sellerId !== userId) {
       throw new ForbiddenException('You can only update your own listings');
     }
