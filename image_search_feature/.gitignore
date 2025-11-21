@@ -1,0 +1,35 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Test images
+/car_images
+
+# Generated FAISS index files (large binary files)
+*.faiss
+
+# Model weights (can be downloaded, large files)
+*.pt
+*.pth
+*.ckpt
+
+# Generated metadata CSV files
+car_metadata*.csv
+
+# Checkpoint folders (temporary files during training/indexing)
+checkpoints/
+checkpoints_v2/
+*.npy
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

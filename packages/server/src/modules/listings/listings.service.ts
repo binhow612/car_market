@@ -305,6 +305,30 @@ export class ListingsService {
       throw new NotFoundException('Listing not found');
     }
 
+    // Load videos separately if not loaded (fallback)
+    if (!listing.carDetail.videos || listing.carDetail.videos.length === 0) {
+      const videos = await this.carVideoRepository.find({
+        where: { carDetailId: listing.carDetailId },
+        order: { sortOrder: 'ASC' },
+      });
+      listing.carDetail.videos = videos;
+    } else {
+      // Ensure videos are sorted by sortOrder
+      listing.carDetail.videos.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+
+    // Load images separately if not loaded (fallback)
+    if (!listing.carDetail.images || listing.carDetail.images.length === 0) {
+      const images = await this.carImageRepository.find({
+        where: { carDetailId: listing.carDetailId },
+        order: { sortOrder: 'ASC' },
+      });
+      listing.carDetail.images = images;
+    } else {
+      // Ensure images are sorted by sortOrder
+      listing.carDetail.images.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+
     // Increment view count
     await this.listingRepository.update(id, {
       viewCount: listing.viewCount + 1,
@@ -320,8 +344,23 @@ export class ListingsService {
   ): Promise<ListingDetail> {
     const listing = await this.listingRepository.findOne({
       where: { id },
-      relations: ['carDetail', 'carDetail.images', 'carDetail.videos'],
+      relations: ['carDetail', 'carDetail.images', 'carDetail.videos', 'seller'],
     });
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    // Ensure videos are loaded
+    if (!listing.carDetail.videos || listing.carDetail.videos.length === 0) {
+      const videos = await this.carVideoRepository.find({
+        where: { carDetailId: listing.carDetailId },
+        order: { sortOrder: 'ASC' },
+      });
+      listing.carDetail.videos = videos;
+    } else {
+      listing.carDetail.videos.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
 
     if (!listing) {
       throw new NotFoundException('Listing not found');

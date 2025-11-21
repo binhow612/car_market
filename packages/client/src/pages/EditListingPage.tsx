@@ -303,6 +303,8 @@ export function EditListingPage() {
       // Set current videos for display
       if (response.carDetail.videos && response.carDetail.videos.length > 0) {
         setCurrentVideos(response.carDetail.videos);
+      } else {
+        setCurrentVideos([]);
       }
     } catch (error) {
       toast.error("Failed to load listing details");

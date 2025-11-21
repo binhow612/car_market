@@ -109,10 +109,12 @@ export class CreateCarImageDto {
   type?: ImageType;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   sortOrder?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   fileSize?: number;
 
@@ -139,10 +141,12 @@ export class CreateCarVideoDto {
   url!: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   sortOrder?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   fileSize?: number;
 
@@ -155,6 +159,7 @@ export class CreateCarVideoDto {
   alt?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   duration?: number;
 

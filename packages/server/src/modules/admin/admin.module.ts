@@ -8,6 +8,7 @@ import { Transaction } from '../../entities/transaction.entity';
 import { ListingPendingChanges } from '../../entities/listing-pending-changes.entity';
 import { CarDetail } from '../../entities/car-detail.entity';
 import { CarImage } from '../../entities/car-image.entity';
+import { CarVideo } from '../../entities/car-video.entity';
 import { LogsModule } from '../logs/logs.module';
 import { RbacModule } from '../rbac/rbac.module';
 
@@ -20,6 +21,7 @@ import { RbacModule } from '../rbac/rbac.module';
       ListingPendingChanges,
       CarDetail,
       CarImage,
+      CarVideo,
     ]),
     LogsModule,
     RbacModule,

@@ -10,6 +10,7 @@ import { Transaction } from '../../entities/transaction.entity';
 import { ListingPendingChanges } from '../../entities/listing-pending-changes.entity';
 import { CarDetail } from '../../entities/car-detail.entity';
 import { CarImage, ImageType } from '../../entities/car-image.entity';
+import { CarVideo } from '../../entities/car-video.entity';
 import { LogsService } from '../logs/logs.service';
 import { LogLevel, LogCategory } from '../../entities/activity-log.entity';
 import { PermissionService } from '../rbac/permission.service';
@@ -29,6 +30,8 @@ export class AdminService {
     private readonly carDetailRepository: Repository<CarDetail>,
     @InjectRepository(CarImage)
     private readonly carImageRepository: Repository<CarImage>,
+    @InjectRepository(CarVideo)
+    private readonly carVideoRepository: Repository<CarVideo>,
     private readonly logsService: LogsService,
     private readonly permissionService: PermissionService,
   ) {}
@@ -105,27 +108,28 @@ export class AdminService {
         where: { listingId, isApplied: false },
       });
 
-      // Track if we've already deleted images to avoid multiple deletions
+      // Track if we've already deleted images/videos to avoid multiple deletions
       let imagesDeleted = false;
+      let videosDeleted = false;
 
       for (const change of pendingChanges) {
-        // Apply the changes to the listing (exclude images as they're handled separately)
+        // Apply the changes to the listing (exclude images and videos as they're handled separately)
         if (
           change.changes.listing &&
           Object.keys(change.changes.listing).length > 0
         ) {
-          const { images, ...listingChanges } = change.changes.listing;
+          const { images, videos, ...listingChanges } = change.changes.listing;
           if (Object.keys(listingChanges).length > 0) {
             await this.listingRepository.update(listingId, listingChanges);
           }
         }
 
-        // Apply car detail changes (exclude images as they're handled separately)
+        // Apply car detail changes (exclude images and videos as they're handled separately)
         if (
           change.changes.carDetail &&
           Object.keys(change.changes.carDetail).length > 0
         ) {
-          const { images, ...carDetailChanges } = change.changes.carDetail;
+          const { images, videos, ...carDetailChanges } = change.changes.carDetail;
           if (Object.keys(carDetailChanges).length > 0) {
             await this.carDetailRepository.update(
               listing.carDetailId,
@@ -162,6 +166,38 @@ export class AdminService {
               }),
             );
             await this.carImageRepository.save(carImages);
+          }
+        }
+
+        // Apply video changes if present
+        if (change.changes.videos && Array.isArray(change.changes.videos)) {
+          const videos = change.changes.videos;
+          if (videos.length > 0) {
+            // Delete existing videos first to avoid conflicts (only once)
+            if (!videosDeleted) {
+              await this.carVideoRepository.delete({
+                carDetailId: listing.carDetailId,
+              });
+              videosDeleted = true;
+            }
+
+            // Create and save new videos
+            const carVideos = videos.map((video, index) =>
+              this.carVideoRepository.create({
+                filename: video.filename,
+                originalName: video.originalName,
+                url: video.url,
+                sortOrder: index,
+                isPrimary: index === 0,
+                alt: video.alt ?? null,
+                carDetailId: listing.carDetailId,
+                fileSize: video.fileSize ?? null,
+                mimeType: video.mimeType ?? null,
+                duration: video.duration ?? null,
+                thumbnailUrl: video.thumbnailUrl ?? null,
+              }),
+            );
+            await this.carVideoRepository.save(carVideos);
           }
         }
 
