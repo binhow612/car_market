@@ -190,6 +190,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     void client.join(`conversation:${conversationId}`);
   }
 
+  sendNotificationToUser(userId: string, event: string, data: any) {
+    if (this.server) {
+      this.server.to(`user:${userId}`).emit(event, data);
+    }
+  }
+
   private async verifyToken(token: string): Promise<string | null> {
     try {
       const secret = process.env.JWT_SECRET;

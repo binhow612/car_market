@@ -139,6 +139,19 @@ class SocketService {
       }
     );
 
+    this.socket.on("listingApproved", (data: {
+      listingId: string;
+      listingTitle: string;
+      message: string;
+      approvedAt: string;
+    }) => {
+      this.emit("listingApproved", data);
+      this.emit("globalNotification", {
+        type: "listingApproved",
+        data: data,
+      });
+    });
+
     this.socket.on("testResponse", () => {
       // Test response received
     });

@@ -23,6 +23,7 @@ import { AuditLog } from '../entities/audit-log.entity';
 import { ListingComment } from '../entities/listing-comment.entity';
 import { CommentReaction } from '../entities/comment-reaction.entity';
 import { CommentReport } from '../entities/comment-report.entity';
+import { Notification } from '../entities/notification.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -69,6 +70,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         ListingComment,
         CommentReaction,
         CommentReport,
+        Notification,
       ],
       synchronize: false,
       migrationsRun: true,

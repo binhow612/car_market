@@ -14,6 +14,9 @@ import { CarVideo } from '../../entities/car-video.entity';
 import { LogsService } from '../logs/logs.service';
 import { LogLevel, LogCategory } from '../../entities/activity-log.entity';
 import { PermissionService } from '../rbac/permission.service';
+import { ChatGateway } from '../chat/chat.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../../entities/notification.entity';
 
 @Injectable()
 export class AdminService {
@@ -34,6 +37,8 @@ export class AdminService {
     private readonly carVideoRepository: Repository<CarVideo>,
     private readonly logsService: LogsService,
     private readonly permissionService: PermissionService,
+    private readonly chatGateway: ChatGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getAllUsers(page: number = 1, limit: number = 10) {
@@ -230,6 +235,41 @@ export class AdminService {
           pendingChangesApplied: pendingChanges.length,
         },
       });
+
+      // Create notification in database
+      try {
+        await this.notificationsService.createNotification(
+          listing.sellerId,
+          NotificationType.LISTING_APPROVED,
+          'Listing Approved',
+          `Your listing "${listing.title}" has been approved and is now live on the website.`,
+          listingId,
+          {
+            listingTitle: listing.title,
+            approvedAt: new Date().toISOString(),
+          },
+        );
+      } catch (notificationError) {
+        // Log error but don't fail the approval
+        console.error('Error creating notification:', notificationError);
+      }
+
+      // Send real-time notification to seller
+      try {
+        this.chatGateway.sendNotificationToUser(
+          listing.sellerId,
+          'listingApproved',
+          {
+            listingId: listingId,
+            listingTitle: listing.title,
+            message: `Your listing "${listing.title}" has been approved and is now live on the website.`,
+            approvedAt: new Date().toISOString(),
+          },
+        );
+      } catch (notificationError) {
+        // Log error but don't fail the approval
+        console.error('Error sending approval notification:', notificationError);
+      }
 
       return { message: 'Listing approved successfully' };
     } catch (error) {
