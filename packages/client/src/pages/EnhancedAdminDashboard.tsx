@@ -43,6 +43,14 @@ import {
   CardTitle,
 } from "../components/ui/Card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/Dialog";
+import {
   Tabs,
   TabsContent,
   TabsList,
@@ -195,6 +203,10 @@ export function EnhancedAdminDashboard() {
     title: string;
     message: string;
   } | null>(null);
+  
+  // Make deactivation confirmation dialog
+  const [showDeactivateMakeDialog, setShowDeactivateMakeDialog] = useState(false);
+  const [makeToDeactivate, setMakeToDeactivate] = useState<{ make: any; modelCount: number } | null>(null);
   const [listingWithPendingChanges, setListingWithPendingChanges] =
     useState<any>(null);
   const [pendingChangesLoading, setPendingChangesLoading] = useState(false);
@@ -647,16 +659,21 @@ export function EnhancedAdminDashboard() {
     const newStatus = !make.isActive;
     const action = newStatus ? 'activate' : 'deactivate';
     
-    // Show warning when deactivating
+    // Show warning dialog when deactivating
     if (!newStatus) {
       const makeModels = adminMetadata?.models?.filter(m => m.makeId === make.id) || [];
-      const confirmMessage = makeModels.length > 0
-        ? `Are you sure you want to deactivate "${make.displayName}"?\n\nThis will also deactivate ${makeModels.length} model(s) associated with this make.`
-        : `Are you sure you want to deactivate "${make.displayName}"?`;
-      
-      if (!window.confirm(confirmMessage)) return;
+      setMakeToDeactivate({ make, modelCount: makeModels.length });
+      setShowDeactivateMakeDialog(true);
+      return;
     }
 
+    // Direct activation without confirmation
+    await performToggleMakeStatus(make, newStatus);
+  };
+
+  const performToggleMakeStatus = async (make: any, newStatus: boolean) => {
+    const action = newStatus ? 'activate' : 'deactivate';
+    
     try {
       const result = await AdminService.toggleMakeStatus(make.id, newStatus);
       
@@ -690,6 +707,14 @@ export function EnhancedAdminDashboard() {
     } catch (error: any) {
       toast.error(error.response?.data?.message || `Failed to ${action} make`);
     }
+  };
+
+  const confirmDeactivateMake = async () => {
+    if (!makeToDeactivate) return;
+    
+    setShowDeactivateMakeDialog(false);
+    await performToggleMakeStatus(makeToDeactivate.make, false);
+    setMakeToDeactivate(null);
   };
 
   const handleToggleModelStatus = async (model: any) => {
@@ -3643,6 +3668,44 @@ export function EnhancedAdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Deactivate Make Confirmation Dialog */}
+      <Dialog open={showDeactivateMakeDialog} onOpenChange={setShowDeactivateMakeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate Car Make</DialogTitle>
+            <DialogDescription>
+              {makeToDeactivate?.modelCount && makeToDeactivate.modelCount > 0 ? (
+                <>
+                  Are you sure you want to deactivate "{makeToDeactivate.make.displayName}"?
+                  <br />
+                  <br />
+                  This will also deactivate {makeToDeactivate.modelCount} model(s) associated with this make.
+                </>
+              ) : (
+                <>Are you sure you want to deactivate "{makeToDeactivate?.make.displayName}"?</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeactivateMakeDialog(false);
+                setMakeToDeactivate(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDeactivateMake}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
