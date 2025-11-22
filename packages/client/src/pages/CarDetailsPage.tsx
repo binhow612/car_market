@@ -659,7 +659,8 @@ export function CarDetailsPage() {
         {/* Comments Section */}
         <CommentSection 
           listingId={listing.id} 
-          listingTitle={listing.title} 
+          listingTitle={listing.title}
+          sellerId={listing.sellerId}
         />
       </div>
 

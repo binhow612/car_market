@@ -201,6 +201,19 @@ export class CommentsService {
     // WebSocket event will be emitted by the controller/gateway
   }
 
+  async getCommentById(commentId: string): Promise<ListingComment> {
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+      relations: ['user', 'listing', 'parentComment'],
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    return comment;
+  }
+
   async getCommentsByListing(listingId: string, query: CommentQueryDto): Promise<{
     comments: ListingComment[];
     pagination: {
@@ -378,7 +391,7 @@ export class CommentsService {
     return this.reportRepository.save(report);
   }
 
-  async pinComment(commentId: string, userId: string): Promise<void> {
+  async pinComment(commentId: string, userId: string): Promise<{ unpinnedCommentId?: string }> {
     const comment = await this.commentRepository.findOne({
       where: { id: commentId },
       relations: ['listing'],
@@ -396,11 +409,36 @@ export class CommentsService {
       throw new BadRequestException('Cannot pin deleted comment');
     }
 
+    // Only allow pinning root comments (not replies)
+    if (comment.parentCommentId) {
+      throw new BadRequestException('Cannot pin reply comments. Only root comments can be pinned');
+    }
+
+    // Find and unpin any previously pinned comment in the same listing
+    const previouslyPinnedComment = await this.commentRepository.findOne({
+      where: {
+        listingId: comment.listingId,
+        isPinned: true,
+        isDeleted: false,
+        parentCommentId: null, // Only root comments
+      },
+    });
+
+    let unpinnedCommentId: string | undefined;
+    if (previouslyPinnedComment && previouslyPinnedComment.id !== commentId) {
+      await this.commentRepository.update(previouslyPinnedComment.id, {
+        isPinned: false,
+      });
+      unpinnedCommentId = previouslyPinnedComment.id;
+    }
+
+    // Pin the new comment
     await this.commentRepository.update(commentId, {
       isPinned: true,
     });
 
     // WebSocket event will be emitted by the controller/gateway
+    return { unpinnedCommentId };
   }
 
   async unpinComment(commentId: string, userId: string): Promise<void> {

@@ -197,10 +197,18 @@ export class CommentsController {
     @Param('id', ParseUUIDPipe) commentId: string,
     @CurrentUser() user: User,
   ) {
-    // Get listing ID from comment
+    // Get comment to retrieve listingId
     const comment = await this.commentsService.getCommentById(commentId);
-    await this.commentsService.pinComment(commentId, user.id);
+    const result = await this.commentsService.pinComment(commentId, user.id);
+    
+    // Emit unpin event for previously pinned comment if exists
+    if (result.unpinnedCommentId) {
+      this.commentsGateway.emitCommentPinned(comment.listingId, result.unpinnedCommentId, false);
+    }
+    
+    // Emit pin event for new pinned comment
     this.commentsGateway.emitCommentPinned(comment.listingId, commentId, true);
+    
     return { message: 'Comment pinned successfully' };
   }
 

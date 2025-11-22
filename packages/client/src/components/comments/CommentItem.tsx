@@ -55,6 +55,24 @@ export function CommentItem({
   const [repliesExpanded, setRepliesExpanded] = useState(false); // Collapse all replies by default (Level 1 and Level 2)
   const [isNewComment, setIsNewComment] = useState(false);
   const commentRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
 
   const isOwner = comment.userId === currentUserId;
   const canEdit = isOwner && !comment.isDeleted;
@@ -195,9 +213,9 @@ export function CommentItem({
               )}
             </div>
 
-            {/* Actions menu - only show for owner */}
-            {isOwner && (
-              <div className="relative flex-shrink-0">
+            {/* Actions menu - show for all authenticated users */}
+            {isAuthenticated && (
+              <div className="relative flex-shrink-0" ref={menuRef}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -209,7 +227,8 @@ export function CommentItem({
                 </Button>
 
                 {showMenu && (
-                  <div className="absolute right-0 top-9 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[140px]">
+                  <div className="absolute right-0 top-9 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[160px]">
+                    {/* Edit - only for owner */}
                     {canEdit && (
                       <button
                         onClick={() => {
@@ -223,7 +242,8 @@ export function CommentItem({
                       </button>
                     )}
                     
-                    {canDelete && (
+                    {/* Delete - for owner or seller */}
+                    {(canDelete || (isSeller && !comment.isDeleted)) && (
                       <button
                         onClick={handleDeleteComment}
                         className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 min-h-[44px] transition-colors"
@@ -233,8 +253,8 @@ export function CommentItem({
                       </button>
                     )}
 
-                    {/* Seller can pin/unpin */}
-                    {isSeller && (
+                    {/* Pin/Unpin - only for seller, only root comments */}
+                    {isSeller && !comment.parentCommentId && (
                       <button
                         onClick={handlePinComment}
                         className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 min-h-[44px] transition-colors"
@@ -252,22 +272,20 @@ export function CommentItem({
                         )}
                       </button>
                     )}
+
+                    {/* Report - for non-owners and non-sellers */}
+                    {!isOwner && !isSeller && (
+                      <button
+                        onClick={handleReportComment}
+                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 min-h-[44px] transition-colors"
+                      >
+                        <Flag className="w-4 h-4 mr-2" />
+                        Report
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-
-            {/* Report button for non-owners */}
-            {!isOwner && isAuthenticated && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReportComment}
-                className="p-1.5 h-8 w-8 rounded-md hover:bg-gray-100 flex-shrink-0"
-                aria-label="Report comment"
-              >
-                <Flag className="w-4 h-4 text-gray-400" />
-              </Button>
             )}
           </div>
 

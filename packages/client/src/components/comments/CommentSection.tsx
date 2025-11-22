@@ -238,11 +238,10 @@ export function CommentSection({ listingId, listingTitle, sellerId }: CommentSec
     const unsubscribePinned = socketService.on('comment:pinned', (data: CommentPinnedEvent) => {
       if (data.listingId === listingId) {
         setComments(prevComments =>
-          prevComments.map(comment =>
-            comment.id === data.commentId
-              ? { ...comment, isPinned: data.isPinned }
-              : comment
-          )
+          updateNestedComment(prevComments, data.commentId, (comment) => ({
+            ...comment,
+            isPinned: data.isPinned,
+          }))
         );
       }
     });
