@@ -77,6 +77,7 @@ export function EditListingPage() {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedMakeId, setSelectedMakeId] = useState<string>("");
+  const [selectedModelId, setSelectedModelId] = useState<string>("");
   const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [formValues, setFormValues] = useState({
     priceType: "",
@@ -85,6 +86,8 @@ export function EditListingPage() {
     transmission: "",
     color: "",
     condition: "",
+    numberOfDoors: "",
+    numberOfSeats: "",
   });
   const { metadata, loading: metadataLoading } = useMetadata();
 
@@ -110,6 +113,21 @@ export function EditListingPage() {
     }
   }, [id]);
 
+  // Set make ID when listing and metadata are both loaded
+  useEffect(() => {
+    if (listing && metadata?.makes && !selectedMakeId) {
+      const listingMake = listing.carDetail.make?.trim();
+      const make = metadata.makes.find(
+        (m) => 
+          m.name?.toLowerCase() === listingMake?.toLowerCase() || 
+          m.displayName?.toLowerCase() === listingMake?.toLowerCase()
+      );
+      if (make) {
+        setSelectedMakeId(make.id);
+      }
+    }
+  }, [listing, metadata, selectedMakeId]);
+
   // Load models when make is selected
   useEffect(() => {
     const loadModels = async () => {
@@ -119,14 +137,35 @@ export function EditListingPage() {
         );
         if (selectedMake) {
           setValue("make", selectedMake.name);
+          
+          // Only reset model if this is a user-initiated change (not initial load)
+          // Check if listing exists and make matches - if so, don't reset
+          const shouldResetModel = !listing || 
+            (selectedMake.name !== listing.carDetail.make && 
+             selectedMake.displayName !== listing.carDetail.make);
+          
+          if (shouldResetModel) {
+            setValue("model", ""); // Reset model when make changes
+            setSelectedModelId(""); // Reset model ID
+          }
 
           try {
             // Fetch models for the selected make
+            const API_BASE_URL =
+              import.meta.env.VITE_API_URL || "http://localhost:3000/api";
             const response = await fetch(
-              `http://localhost:3000/api/metadata/makes/${selectedMakeId}/models`
+              `${API_BASE_URL}/metadata/makes/${selectedMakeId}/models`
             );
             const models = await response.json();
-            setAvailableModels(models);
+            // Filter out any null/undefined models and ensure they have required fields
+            const validModels = Array.isArray(models) 
+              ? models.filter((model: any) => 
+                  model && 
+                  model.id && 
+                  (model.displayName || model.name)
+                )
+              : [];
+            setAvailableModels(validModels);
           } catch (error) {
             console.error("Failed to fetch models:", error);
             setAvailableModels([]);
@@ -134,11 +173,40 @@ export function EditListingPage() {
         }
       } else {
         setAvailableModels([]);
+        if (!listing) {
+          setSelectedModelId("");
+        }
       }
     };
 
     loadModels();
-  }, [selectedMakeId, metadata, setValue]);
+  }, [selectedMakeId, metadata, setValue, listing]);
+
+  // Set model ID when models are loaded and listing exists
+  useEffect(() => {
+    if (listing && availableModels.length > 0 && selectedMakeId && !selectedModelId) {
+      // Only set model if not already set
+      const listingMake = listing.carDetail.make?.trim();
+      const listingModel = listing.carDetail.model?.trim();
+      const selectedMake = metadata?.makes?.find(m => m.id === selectedMakeId);
+      
+      if (selectedMake && (
+        selectedMake.name?.toLowerCase() === listingMake?.toLowerCase() || 
+        selectedMake.displayName?.toLowerCase() === listingMake?.toLowerCase()
+      )) {
+        const model = availableModels.find(
+          (m) => 
+            m.name?.toLowerCase() === listingModel?.toLowerCase() || 
+            m.displayName?.toLowerCase() === listingModel?.toLowerCase()
+        );
+        
+        if (model) {
+          setSelectedModelId(model.id);
+          setValue("model", model.name);
+        }
+      }
+    }
+  }, [availableModels, listing, selectedModelId, selectedMakeId, metadata, setValue]);
 
   // Handle form value changes
   const handleFormValueChange = (field: string, value: string) => {
@@ -261,6 +329,10 @@ export function EditListingPage() {
       const response = await ListingService.getListing(listingId);
       setListing(response);
 
+      // Reset make and model selection when loading new listing
+      setSelectedMakeId("");
+      setSelectedModelId("");
+
       // Populate form
       setValue("title", response.title);
       setValue("description", response.description);
@@ -272,10 +344,24 @@ export function EditListingPage() {
       setValue("country", response.country || "USA");
       setValue("make", response.carDetail.make);
       setValue("model", response.carDetail.model);
+      
       setValue("year", response.carDetail.year);
       setValue("bodyType", response.carDetail.bodyType);
       setValue("fuelType", response.carDetail.fuelType);
       setValue("transmission", response.carDetail.transmission);
+      
+      // Update formValues for EnhancedSelect components
+      setFormValues((prev) => ({
+        ...prev,
+        bodyType: response.carDetail.bodyType || "",
+        fuelType: response.carDetail.fuelType || "",
+        transmission: response.carDetail.transmission || "",
+        priceType: response.priceType || "negotiable",
+        color: response.carDetail.color || "",
+        condition: response.carDetail.condition || "",
+        numberOfDoors: response.carDetail.numberOfDoors?.toString() || "",
+        numberOfSeats: response.carDetail.numberOfSeats?.toString() || "",
+      }));
       setValue("engineSize", response.carDetail.engineSize);
       setValue("enginePower", response.carDetail.enginePower);
       setValue("mileage", response.carDetail.mileage);
@@ -708,15 +794,20 @@ export function EditListingPage() {
                   Model
                 </label>
                 <EnhancedSelect
-                  options={availableModels.map((model) => ({
-                    value: model.id,
-                    label: model.displayName,
-                  }))}
+                  key={`model-select-${selectedMakeId}-${availableModels.length}`}
+                  options={availableModels
+                    .filter((model) => model && model.id && (model.displayName || model.name))
+                    .map((model) => ({
+                      value: model.id,
+                      label: model.displayName || model.name || "Unknown Model",
+                    }))}
+                  value={selectedModelId || ""}
                   onValueChange={(value) => {
                     const selectedModel = availableModels.find(
-                      (model) => model.id === value
+                      (model) => model && model.id === value
                     );
                     if (selectedModel) {
+                      setSelectedModelId(value as string);
                       setValue("model", selectedModel.name);
                       // Auto-set body type if available
                       if (selectedModel.defaultBodyStyle) {
@@ -795,20 +886,22 @@ export function EditListingPage() {
                 >
                   Fuel Type
                 </label>
-                <select
-                  id="fuelType"
-                  {...register("fuelType")}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.fuelType ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select fuel type</option>
-                  {(metadata?.fuelTypes || []).map((fuelType) => (
-                    <option key={fuelType.id} value={fuelType.value}>
-                      {fuelType.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.fuelTypes?.map((fuelType) => ({
+                      value: fuelType.value,
+                      label: fuelType.displayValue,
+                    })) || []
+                  }
+                  value={formValues.fuelType}
+                  onValueChange={(value) =>
+                    handleFormValueChange("fuelType", value as string)
+                  }
+                  placeholder="Select fuel type"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.fuelType}
+                />
                 {errors.fuelType && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.fuelType.message}
@@ -823,20 +916,22 @@ export function EditListingPage() {
                 >
                   Transmission
                 </label>
-                <select
-                  id="transmission"
-                  {...register("transmission")}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.transmission ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select transmission</option>
-                  {(metadata?.transmissionTypes || []).map((transmission) => (
-                    <option key={transmission.id} value={transmission.value}>
-                      {transmission.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.transmissionTypes?.map((transmission) => ({
+                      value: transmission.value,
+                      label: transmission.displayValue,
+                    })) || []
+                  }
+                  value={formValues.transmission}
+                  onValueChange={(value) =>
+                    handleFormValueChange("transmission", value as string)
+                  }
+                  placeholder="Select transmission"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.transmission}
+                />
                 {errors.transmission && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.transmission.message}
@@ -916,20 +1011,22 @@ export function EditListingPage() {
                 >
                   Color
                 </label>
-                <select
-                  id="color"
-                  {...register("color")}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.color ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select color</option>
-                  {(metadata?.colors || []).map((color) => (
-                    <option key={color.id} value={color.value}>
-                      {color.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.colors?.map((color) => ({
+                      value: color.value,
+                      label: color.displayValue,
+                    })) || []
+                  }
+                  value={formValues.color}
+                  onValueChange={(value) =>
+                    handleFormValueChange("color", value as string)
+                  }
+                  placeholder="Select color"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.color}
+                />
                 {errors.color && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.color.message}
@@ -944,19 +1041,30 @@ export function EditListingPage() {
                 >
                   Number of Doors
                 </label>
-                <select
-                  id="numberOfDoors"
-                  {...register("numberOfDoors", { valueAsNumber: true })}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.numberOfDoors ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value={2}>2 Doors</option>
-                  <option value={3}>3 Doors</option>
-                  <option value={4}>4 Doors</option>
-                  <option value={5}>5 Doors</option>
-                  <option value={6}>6 Doors</option>
-                </select>
+                <EnhancedSelect
+                  options={[
+                    { value: "2", label: "2 Doors" },
+                    { value: "3", label: "3 Doors" },
+                    { value: "4", label: "4 Doors" },
+                    { value: "5", label: "5 Doors" },
+                    { value: "6", label: "6 Doors" },
+                  ]}
+                  value={formValues.numberOfDoors || ""}
+                  onValueChange={(value) => {
+                    const numValue = parseInt(value as string);
+                    setValue("numberOfDoors", numValue);
+                    setFormValues((prev) => ({ ...prev, numberOfDoors: value as string }));
+                  }}
+                  placeholder="Select number of doors"
+                  searchable={false}
+                  multiple={false}
+                  error={!!errors.numberOfDoors}
+                />
+                {errors.numberOfDoors && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.numberOfDoors.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -966,21 +1074,32 @@ export function EditListingPage() {
                 >
                   Number of Seats
                 </label>
-                <select
-                  id="numberOfSeats"
-                  {...register("numberOfSeats", { valueAsNumber: true })}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.numberOfSeats ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value={2}>2 Seats</option>
-                  <option value={4}>4 Seats</option>
-                  <option value={5}>5 Seats</option>
-                  <option value={6}>6 Seats</option>
-                  <option value={7}>7 Seats</option>
-                  <option value={8}>8 Seats</option>
-                  <option value={9}>9 Seats</option>
-                </select>
+                <EnhancedSelect
+                  options={[
+                    { value: "2", label: "2 Seats" },
+                    { value: "4", label: "4 Seats" },
+                    { value: "5", label: "5 Seats" },
+                    { value: "6", label: "6 Seats" },
+                    { value: "7", label: "7 Seats" },
+                    { value: "8", label: "8 Seats" },
+                    { value: "9", label: "9 Seats" },
+                  ]}
+                  value={formValues.numberOfSeats || ""}
+                  onValueChange={(value) => {
+                    const numValue = parseInt(value as string);
+                    setValue("numberOfSeats", numValue);
+                    setFormValues((prev) => ({ ...prev, numberOfSeats: value as string }));
+                  }}
+                  placeholder="Select number of seats"
+                  searchable={false}
+                  multiple={false}
+                  error={!!errors.numberOfSeats}
+                />
+                {errors.numberOfSeats && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.numberOfSeats.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -991,20 +1110,22 @@ export function EditListingPage() {
               >
                 Condition
               </label>
-              <select
-                id="condition"
-                {...register("condition")}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.condition ? "border-red-500" : "border-gray-300"
-                }`}
-              >
-                <option value="">Select condition</option>
-                {(metadata?.conditions || []).map((condition) => (
-                  <option key={condition.id} value={condition.value}>
-                    {condition.displayValue}
-                  </option>
-                ))}
-              </select>
+              <EnhancedSelect
+                options={
+                  metadata?.conditions?.map((condition) => ({
+                    value: condition.value,
+                    label: condition.displayValue,
+                  })) || []
+                }
+                value={formValues.condition}
+                onValueChange={(value) =>
+                  handleFormValueChange("condition", value as string)
+                }
+                placeholder="Select condition"
+                searchable={true}
+                multiple={false}
+                error={!!errors.condition}
+              />
               {errors.condition && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.condition.message}
