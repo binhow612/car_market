@@ -17,6 +17,7 @@ export enum NotificationType {
   NEW_MESSAGE = 'new_message',
   LISTING_SOLD = 'listing_sold',
   NEW_INQUIRY = 'new_inquiry',
+  COMMENT_REPORTED = 'comment_reported',
   SYSTEM = 'system',
 }
 

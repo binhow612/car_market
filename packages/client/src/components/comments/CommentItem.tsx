@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Comment } from '../../types/comment.types';
 import { CommentForm } from './CommentForm';
 import { CommentReactions } from './CommentReactions';
+import { ReportCommentDialog } from './ReportCommentDialog';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
 import { 
@@ -52,6 +53,7 @@ export function CommentItem({
   const [isEditing, setIsEditing] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [repliesExpanded, setRepliesExpanded] = useState(false); // Collapse all replies by default (Level 1 and Level 2)
   const [isNewComment, setIsNewComment] = useState(false);
   const commentRef = useRef<HTMLDivElement>(null);
@@ -141,8 +143,7 @@ export function CommentItem({
   };
 
   const handleReportComment = () => {
-    // TODO: Implement report functionality
-    toast.error('Report functionality coming soon');
+    setShowReportDialog(true);
     setShowMenu(false);
   };
 
@@ -391,6 +392,13 @@ export function CommentItem({
           )}
         </div>
       </div>
+
+      {/* Report Comment Dialog */}
+      <ReportCommentDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        commentId={comment.id}
+      />
     </div>
   );
 }

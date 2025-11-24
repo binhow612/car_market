@@ -1,16 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   Notification,
   NotificationType,
 } from '../../entities/notification.entity';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
+    @Optional() @Inject(NotificationsGateway)
+    private readonly notificationsGateway?: NotificationsGateway,
   ) {}
 
   async createNotification(
@@ -31,7 +34,27 @@ export class NotificationsService {
       isRead: false,
     });
 
-    return await this.notificationRepository.save(notification);
+    const savedNotification = await this.notificationRepository.save(notification);
+
+    // Load relations for real-time emit
+    const notificationWithRelations = await this.notificationRepository.findOne({
+      where: { id: savedNotification.id },
+      relations: ['relatedListing'],
+    });
+
+    // Send real-time notification
+    if (notificationWithRelations && this.notificationsGateway) {
+      this.notificationsGateway.sendNotificationToUser(
+        userId,
+        notificationWithRelations,
+      );
+
+      // Update unread count
+      const unreadCount = await this.getUnreadCount(userId);
+      this.notificationsGateway.sendUnreadCountUpdateToUser(userId, unreadCount);
+    }
+
+    return savedNotification;
   }
 
   async getUserNotifications(
@@ -89,6 +112,18 @@ export class NotificationsService {
     await this.notificationRepository.update(notificationId, {
       isRead: true,
     });
+
+    // Send real-time update
+    if (this.notificationsGateway) {
+      this.notificationsGateway.sendNotificationUpdateToUser(userId, {
+        type: 'read',
+        notificationId,
+      });
+
+      // Update unread count
+      const unreadCount = await this.getUnreadCount(userId);
+      this.notificationsGateway.sendUnreadCountUpdateToUser(userId, unreadCount);
+    }
   }
 
   async markAllAsRead(userId: string): Promise<void> {
@@ -96,6 +131,12 @@ export class NotificationsService {
       { userId, isRead: false },
       { isRead: true },
     );
+
+    // Update unread count
+    if (this.notificationsGateway) {
+      const unreadCount = await this.getUnreadCount(userId);
+      this.notificationsGateway.sendUnreadCountUpdateToUser(userId, unreadCount);
+    }
   }
 
   async deleteNotification(notificationId: string, userId: string): Promise<void> {
@@ -106,6 +147,18 @@ export class NotificationsService {
 
     if (result.affected === 0) {
       throw new Error('Notification not found');
+    }
+
+    // Send real-time update
+    if (this.notificationsGateway) {
+      this.notificationsGateway.sendNotificationUpdateToUser(userId, {
+        type: 'deleted',
+        notificationId,
+      });
+
+      // Update unread count
+      const unreadCount = await this.getUnreadCount(userId);
+      this.notificationsGateway.sendUnreadCountUpdateToUser(userId, unreadCount);
     }
   }
 }

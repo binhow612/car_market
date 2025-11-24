@@ -6,6 +6,7 @@ import { CommentsGateway } from './comments.gateway';
 import { WsJwtGuard } from '../chat/guards/ws-jwt.guard';
 import { AuthModule } from '../auth/auth.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { ListingComment } from '../../entities/listing-comment.entity';
 import { CommentReaction } from '../../entities/comment-reaction.entity';
 import { CommentReport } from '../../entities/comment-report.entity';
@@ -23,6 +24,7 @@ import { User } from '../../entities/user.entity';
     ]),
     AuthModule,
     RbacModule, // Import RbacModule to use RolesGuard
+    NotificationsModule, // Import NotificationsModule to send notifications
   ],
   controllers: [CommentsController],
   providers: [CommentsService, CommentsGateway, WsJwtGuard],

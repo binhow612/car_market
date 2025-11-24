@@ -12,6 +12,7 @@ import { Transaction } from '../../entities/transaction.entity';
 import { ChatConversation } from '../../entities/chat-conversation.entity';
 import { LogsModule } from '../logs/logs.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { RbacModule } from '../rbac/rbac.module';
     ]),
     LogsModule,
     RbacModule, // Import RbacModule to use PermissionGuard and ResourceGuard
+    NotificationsModule,
   ],
   controllers: [ListingsController],
   providers: [ListingsService],

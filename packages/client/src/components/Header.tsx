@@ -13,6 +13,7 @@ import { useNotifications } from "../contexts/NotificationContext";
 import { usePermissions } from "../hooks/usePermissions";
 import { Button } from "./ui/Button";
 import { Avatar } from "./ui/Avatar";
+import { NotificationBell } from "./NotificationBell";
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -80,6 +81,8 @@ export function Header() {
                     </Link>
                   </Button>
                 )}
+
+                <NotificationBell />
 
                 <div className="relative group">
                   <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">

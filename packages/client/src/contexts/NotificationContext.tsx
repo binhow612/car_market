@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuthStore } from "../store/auth";
 import { ChatService } from "../services/chat.service";
-import { NotificationService, type Notification } from "../services/notification.service";
+import { NotificationService, type Notification, NotificationType } from "../services/notification.service";
 import { socketService } from "../services/socket.service";
 import toast from "react-hot-toast";
 import type { ChatConversation } from "../services/chat.service";
@@ -127,6 +127,53 @@ export function NotificationProvider({
         }
       );
 
+      // Listen for real-time notification events
+      const unsubscribeNewNotification = socketService.on(
+        "newNotification",
+        (data: { notification: Notification }) => {
+          // Add new notification to the list
+          setNotifications((prev) => [data.notification, ...prev]);
+          // Refresh unread count
+          refreshNotifications();
+          
+          // Show toast for important notifications
+          if (
+            data.notification.type === NotificationType.LISTING_APPROVED ||
+            data.notification.type === NotificationType.LISTING_REJECTED ||
+            data.notification.type === NotificationType.LISTING_SOLD
+          ) {
+            toast.success(data.notification.title, {
+              duration: 5000,
+            });
+          }
+        }
+      );
+
+      const unsubscribeNotificationUpdate = socketService.on(
+        "notificationUpdate",
+        (data: { type: "read" | "deleted"; notificationId: string }) => {
+          if (data.type === "read") {
+            setNotifications((prev) =>
+              prev.map((n) =>
+                n.id === data.notificationId ? { ...n, isRead: true } : n
+              )
+            );
+          } else if (data.type === "deleted") {
+            setNotifications((prev) =>
+              prev.filter((n) => n.id !== data.notificationId)
+            );
+          }
+          refreshNotifications();
+        }
+      );
+
+      const unsubscribeUnreadCountUpdate = socketService.on(
+        "unreadCountUpdate",
+        (data: { count: number }) => {
+          setUnreadCount(data.count);
+        }
+      );
+
       // Refresh every 30 seconds
       const interval = setInterval(() => {
         refreshConversations();
@@ -137,6 +184,9 @@ export function NotificationProvider({
         clearTimeout(timer);
         clearInterval(interval);
         unsubscribeGlobalNotification();
+        unsubscribeNewNotification();
+        unsubscribeNotificationUpdate();
+        unsubscribeUnreadCountUpdate();
       };
     }
     

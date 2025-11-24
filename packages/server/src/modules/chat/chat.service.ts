@@ -9,6 +9,9 @@ import { Server } from 'socket.io';
 import { ChatConversation } from '../../entities/chat-conversation.entity';
 import { ChatMessage, MessageType } from '../../entities/chat-message.entity';
 import { ListingDetail } from '../../entities/listing-detail.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../../entities/notification.entity';
+
 @Injectable()
 export class ChatService {
   private io!: Server;
@@ -20,6 +23,7 @@ export class ChatService {
     private readonly messageRepository: Repository<ChatMessage>,
     @InjectRepository(ListingDetail)
     private readonly listingRepository: Repository<ListingDetail>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   setSocketIO(io: Server) {
@@ -67,6 +71,24 @@ export class ChatService {
         `Hello! I'm interested in your listing: ${listing.title}`,
         MessageType.SYSTEM,
       );
+
+      // Create notification for seller about new inquiry
+      try {
+        await this.notificationsService.createNotification(
+          listing.sellerId,
+          NotificationType.NEW_INQUIRY,
+          'New Inquiry',
+          `Someone is interested in your listing: "${listing.title}"`,
+          listingId,
+          {
+            listingTitle: listing.title,
+            buyerId: buyerId,
+            conversationId: conversation.id,
+          },
+        );
+      } catch (notificationError) {
+        console.error('Error creating new inquiry notification:', notificationError);
+      }
     }
 
     return this.getConversationWithMessages(conversation.id);
@@ -125,6 +147,37 @@ export class ChatService {
         conversationId,
         message: messageWithSender,
       });
+    }
+
+    // Create notification for the other user (only for non-system messages)
+    if (type !== MessageType.SYSTEM && messageWithSender) {
+      const otherUserId =
+        senderId === conversation.buyerId
+          ? conversation.sellerId
+          : conversation.buyerId;
+
+      // Get listing for notification
+      const listing = await this.listingRepository.findOne({
+        where: { id: conversation.listingId },
+      });
+
+      try {
+        await this.notificationsService.createNotification(
+          otherUserId,
+          NotificationType.NEW_MESSAGE,
+          'New Message',
+          `${messageWithSender.sender.firstName} ${messageWithSender.sender.lastName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+          conversation.listingId,
+          {
+            conversationId: conversationId,
+            senderId: senderId,
+            messageId: savedMessage.id,
+            listingTitle: listing?.title,
+          },
+        );
+      } catch (notificationError) {
+        console.error('Error creating new message notification:', notificationError);
+      }
     }
 
     return messageWithSender;

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL CHECK (type IN (
         'listing_approved', 'listing_rejected', 'new_message', 
-        'listing_sold', 'new_inquiry', 'system'
+        'listing_sold', 'new_inquiry', 'comment_reported', 'system'
     )),
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,

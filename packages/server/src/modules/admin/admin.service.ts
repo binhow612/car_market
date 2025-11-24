@@ -336,6 +336,43 @@ export class AdminService {
 
     await this.logsService.createLog(logPayload);
 
+    // Create notification in database
+    try {
+      await this.notificationsService.createNotification(
+        listing.sellerId,
+        NotificationType.LISTING_REJECTED,
+        'Listing Rejected',
+        `Your listing "${listing.title}" has been rejected${reason ? `: ${reason}` : '.'}`,
+        listingId,
+        {
+          listingTitle: listing.title,
+          rejectionReason: reason,
+          rejectedAt: new Date().toISOString(),
+        },
+      );
+    } catch (notificationError) {
+      // Log error but don't fail the rejection
+      console.error('Error creating notification:', notificationError);
+    }
+
+    // Send real-time notification to seller
+    try {
+      this.chatGateway.sendNotificationToUser(
+        listing.sellerId,
+        'listingRejected',
+        {
+          listingId: listingId,
+          listingTitle: listing.title,
+          message: `Your listing "${listing.title}" has been rejected${reason ? `: ${reason}` : '.'}`,
+          rejectionReason: reason,
+          rejectedAt: new Date().toISOString(),
+        },
+      );
+    } catch (notificationError) {
+      // Log error but don't fail the rejection
+      console.error('Error sending rejection notification:', notificationError);
+    }
+
     return { message: 'Listing rejected successfully' };
   }
 

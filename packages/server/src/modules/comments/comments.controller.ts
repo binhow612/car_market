@@ -181,7 +181,16 @@ export class CommentsController {
     @CurrentUser() user: User,
     @Body() reportCommentDto: ReportCommentDto,
   ) {
-    return this.commentsService.reportComment(commentId, user.id, reportCommentDto);
+    const comment = await this.commentsService.getCommentById(commentId);
+    const result = await this.commentsService.reportComment(commentId, user.id, reportCommentDto);
+    this.commentsGateway.emitCommentReported(comment.listingId, commentId);
+    
+    // Emit notification to seller if notification was created
+    if (result.notification && comment.listing.sellerId) {
+      this.commentsGateway.emitNotification(comment.listing.sellerId, result.notification);
+    }
+    
+    return result.report;
   }
 
   @Put(':id/pin')

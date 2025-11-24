@@ -13,6 +13,7 @@ import { MyListingsPage } from "./pages/MyListingsPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import { ChatPage } from "./pages/ChatPage";
 import { ConversationsListPage } from "./pages/ConversationsListPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 import { EnhancedAdminDashboard } from "./pages/EnhancedAdminDashboard";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -126,6 +127,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <ChatPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/notifications"
+                    element={
+                      <ProtectedRoute>
+                        <NotificationsPage />
                       </ProtectedRoute>
                     }
                   />

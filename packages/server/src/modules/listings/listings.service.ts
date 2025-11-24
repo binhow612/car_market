@@ -26,6 +26,8 @@ import { UpdateListingDto } from './dto/update-listing.dto';
 import { MarkAsSoldDto } from './dto/mark-as-sold.dto';
 import { hasActualChanges } from '../../utils/value-comparison.util';
 import { LogsService } from '../logs/logs.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../../entities/notification.entity';
 
 @Injectable()
 export class ListingsService {
@@ -47,6 +49,7 @@ export class ListingsService {
     @InjectRepository(ChatConversation)
     private readonly conversationRepository: Repository<ChatConversation>,
     private readonly logsService: LogsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -795,6 +798,46 @@ export class ListingsService {
 
     // Reload listing with relations
     const updatedListing = await this.findOne(listingId);
+
+    // Create notification for seller
+    try {
+      await this.notificationsService.createNotification(
+        sellerId,
+        NotificationType.LISTING_SOLD,
+        'Listing Sold',
+        `Your listing "${updatedListing.title}" has been marked as sold.`,
+        listingId,
+        {
+          listingTitle: updatedListing.title,
+          buyerId: markAsSoldDto.buyerId,
+          transactionNumber: transactionNumber,
+          amount: markAsSoldDto.amount,
+          soldAt: new Date().toISOString(),
+        },
+      );
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError);
+    }
+
+    // Create notification for buyer
+    try {
+      await this.notificationsService.createNotification(
+        markAsSoldDto.buyerId,
+        NotificationType.LISTING_SOLD,
+        'Purchase Confirmed',
+        `You have successfully purchased "${updatedListing.title}".`,
+        listingId,
+        {
+          listingTitle: updatedListing.title,
+          sellerId: sellerId,
+          transactionNumber: transactionNumber,
+          amount: markAsSoldDto.amount,
+          purchasedAt: new Date().toISOString(),
+        },
+      );
+    } catch (notificationError) {
+      console.error('Error creating buyer notification:', notificationError);
+    }
 
     return {
       listing: updatedListing,

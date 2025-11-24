@@ -44,6 +44,7 @@ export interface TypingStatus {
 class SocketService {
   private socket: Socket | null = null;
   private commentsSocket: Socket | null = null;
+  private notificationsSocket: Socket | null = null;
   private listeners: Map<string, Function[]> = new Map();
 
   connect() {
@@ -78,6 +79,19 @@ class SocketService {
 
       this.setupCommentsEventListeners();
     }
+
+    // Connect to notifications namespace
+    if (!this.notificationsSocket?.connected) {
+      this.notificationsSocket = io("http://localhost:3000/notifications", {
+        query: { token },
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+      });
+
+      this.setupNotificationsEventListeners();
+    }
   }
 
   disconnect() {
@@ -89,6 +103,11 @@ class SocketService {
     if (this.commentsSocket) {
       this.commentsSocket.disconnect();
       this.commentsSocket = null;
+    }
+
+    if (this.notificationsSocket) {
+      this.notificationsSocket.disconnect();
+      this.notificationsSocket = null;
     }
     
     this.listeners.clear();
@@ -268,6 +287,37 @@ class SocketService {
 
   isCommentsConnected(): boolean {
     return this.commentsSocket?.connected || false;
+  }
+
+  private setupNotificationsEventListeners() {
+    if (!this.notificationsSocket) return;
+
+    this.notificationsSocket.on("connect", () => {
+      console.log("Connected to notifications namespace");
+    });
+
+    this.notificationsSocket.on("disconnect", () => {
+      console.log("Disconnected from notifications namespace");
+    });
+
+    this.notificationsSocket.on("newNotification", (data: { notification: any }) => {
+      this.emit("newNotification", data);
+    });
+
+    this.notificationsSocket.on("notificationUpdate", (data: {
+      type: "read" | "deleted";
+      notificationId: string;
+    }) => {
+      this.emit("notificationUpdate", data);
+    });
+
+    this.notificationsSocket.on("unreadCountUpdate", (data: { count: number }) => {
+      this.emit("unreadCountUpdate", data);
+    });
+  }
+
+  isNotificationsConnected(): boolean {
+    return this.notificationsSocket?.connected || false;
   }
 }
 
