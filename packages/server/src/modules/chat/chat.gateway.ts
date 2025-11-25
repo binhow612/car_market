@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
+import { Inject, forwardRef } from '@nestjs/common';
 import { ChatService } from './chat.service';
 
 interface AuthenticatedSocket extends Socket {
@@ -30,6 +31,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private userSockets: Map<string, string[]> = new Map();
 
   constructor(
+    @Inject(forwardRef(() => ChatService))
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
   ) {}
@@ -93,15 +95,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      // sendMessage already emits the socket event, so we don't need to emit again
       const message = await this.chatService.sendMessage(
-        data.conversationId,
         client.userId,
+        data.conversationId,
         data.content,
       );
-      this.server.to(`conversation:${data.conversationId}`).emit('newMessage', {
-        conversationId: data.conversationId,
-        message,
-      });
 
       const conversation = await this.chatService.getConversationById(
         data.conversationId,

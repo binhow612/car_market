@@ -161,5 +161,77 @@ export class NotificationsService {
       this.notificationsGateway.sendUnreadCountUpdateToUser(userId, unreadCount);
     }
   }
+
+  /**
+   * Update or create a notification for a new message.
+   * If there's already an unread notification for this conversation, update it.
+   * Otherwise, create a new one.
+   */
+  async updateOrCreateMessageNotification(
+    userId: string,
+    conversationId: string,
+    senderName: string,
+    relatedListingId?: string | null,
+    metadata?: Record<string, any>,
+  ): Promise<Notification> {
+    // Check if there's an unread notification for this conversation
+    // Query using JSONB operator to find notification with matching conversationId in metadata
+    const existingNotification = await this.notificationRepository
+      .createQueryBuilder('notification')
+      .where('notification.userId = :userId', { userId })
+      .andWhere('notification.type = :type', { type: NotificationType.NEW_MESSAGE })
+      .andWhere('notification.isRead = :isRead', { isRead: false })
+      .andWhere("notification.metadata->>'conversationId' = :conversationId", {
+        conversationId,
+      })
+      .orderBy('notification.createdAt', 'DESC')
+      .getOne();
+
+    if (existingNotification) {
+      // Update existing notification
+      existingNotification.message = `New message from ${senderName}`;
+      existingNotification.updatedAt = new Date();
+      if (metadata) {
+        existingNotification.metadata = {
+          ...existingNotification.metadata,
+          ...metadata,
+        };
+      }
+
+      const updatedNotification = await this.notificationRepository.save(
+        existingNotification,
+      );
+
+      // Load relations for real-time emit
+      const notificationWithRelations = await this.notificationRepository.findOne({
+        where: { id: updatedNotification.id },
+        relations: ['relatedListing'],
+      });
+
+      // Send real-time notification update
+      if (notificationWithRelations && this.notificationsGateway) {
+        this.notificationsGateway.sendNotificationToUser(
+          userId,
+          notificationWithRelations,
+        );
+
+        // Update unread count
+        const unreadCount = await this.getUnreadCount(userId);
+        this.notificationsGateway.sendUnreadCountUpdateToUser(userId, unreadCount);
+      }
+
+      return updatedNotification;
+    } else {
+      // Create new notification
+      return await this.createNotification(
+        userId,
+        NotificationType.NEW_MESSAGE,
+        'New Message',
+        `New message from ${senderName}`,
+        relatedListingId,
+        metadata,
+      );
+    }
+  }
 }
 
