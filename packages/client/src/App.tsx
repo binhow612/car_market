@@ -19,6 +19,11 @@ import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { PublicRoute } from "./components/PublicRoute";
+import { SuperAdminDashboard } from "./pages/dashboards/SuperAdminDashboard";
+import { AdminDashboard } from "./pages/dashboards/AdminDashboard";
+import { ModeratorDashboard } from "./pages/dashboards/ModeratorDashboard";
+import { SellerDashboard } from "./pages/dashboards/SellerDashboard";
+import { BuyerDashboard } from "./pages/dashboards/BuyerDashboard";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { SocketProvider } from "./contexts/SocketContext";
 import { AssistantProvider } from "./contexts/AssistantContext";
@@ -146,6 +151,48 @@ function App() {
                       <AdminRoute>
                         <EnhancedAdminDashboard />
                       </AdminRoute>
+                    }
+                  />
+
+                  {/* Analytics Dashboards */}
+                  <Route
+                    path="/dashboard/super-admin"
+                    element={
+                      <ProtectedRoute requireAnyRole={["super_admin"]} requireAnyPermission={["analytics:view"]}>
+                        <SuperAdminDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/admin"
+                    element={
+                      <ProtectedRoute requireAnyRole={["admin", "super_admin"]} requireAnyPermission={["dashboard:admin", "analytics:view"]}>
+                        <AdminDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/moderator"
+                    element={
+                      <ProtectedRoute requireAnyRole={["moderator", "admin", "super_admin"]} requireAnyPermission={["analytics:view"]}>
+                        <ModeratorDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/seller"
+                    element={
+                      <ProtectedRoute requireAnyPermission={["dashboard:seller", "analytics:view"]}>
+                        <SellerDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/buyer"
+                    element={
+                      <ProtectedRoute requireAnyPermission={["dashboard:buyer", "analytics:view"]}>
+                        <BuyerDashboard />
+                      </ProtectedRoute>
                     }
                   />
                 </Route>

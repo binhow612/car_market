@@ -68,6 +68,17 @@ export class RbacSeed {
       // System permissions
       { name: 'system:logs', description: 'View system logs', action: PermissionAction.READ, resource: PermissionResource.LOGS },
       { name: 'system:manage', description: 'Manage system settings', action: PermissionAction.MANAGE, resource: PermissionResource.SYSTEM },
+
+      // Analytics permissions
+      { name: 'analytics:view', description: 'View analytics', action: PermissionAction.READ, resource: PermissionResource.SYSTEM },
+      { name: 'analytics:revenue', description: 'View revenue data', action: PermissionAction.READ, resource: PermissionResource.SYSTEM },
+      { name: 'analytics:users', description: 'View user analytics', action: PermissionAction.READ, resource: PermissionResource.SYSTEM },
+      { name: 'analytics:listings', description: 'View listing analytics', action: PermissionAction.READ, resource: PermissionResource.SYSTEM },
+
+      // Dashboard permissions
+      { name: 'dashboard:admin', description: 'Access admin dashboard', action: PermissionAction.READ, resource: PermissionResource.ADMIN },
+      { name: 'dashboard:seller', description: 'Access seller dashboard', action: PermissionAction.READ, resource: PermissionResource.USER },
+      { name: 'dashboard:buyer', description: 'Access buyer dashboard', action: PermissionAction.READ, resource: PermissionResource.USER },
     ];
 
     const permissions: Permission[] = [];
@@ -107,7 +118,9 @@ export class RbacSeed {
           p.name.startsWith('listing:') || 
           p.name.startsWith('admin:') ||
           p.name.startsWith('system:logs') ||
-          p.name === 'system:manage' // Add system:manage for metadata management
+          p.name === 'system:manage' || // Add system:manage for metadata management
+          p.name.startsWith('analytics:') ||
+          p.name === 'dashboard:admin'
         ),
       },
       {
@@ -119,7 +132,9 @@ export class RbacSeed {
           p.name.startsWith('listing:read') ||
           p.name.startsWith('listing:update') ||
           p.name.startsWith('chat:') ||
-          p.name.startsWith('user:read')
+          p.name.startsWith('user:read') ||
+          p.name === 'analytics:view' ||
+          p.name === 'analytics:listings'
         ),
       },
       {
@@ -132,7 +147,11 @@ export class RbacSeed {
           p.name.startsWith('transaction:') ||
           p.name.startsWith('chat:send') ||
           p.name.startsWith('chat:read') ||
-          p.name.startsWith('assistant:use')
+          p.name.startsWith('assistant:use') ||
+          p.name === 'analytics:view' ||
+          p.name === 'analytics:revenue' ||
+          p.name === 'analytics:listings' ||
+          p.name === 'dashboard:seller'
         ),
       },
       {
@@ -148,7 +167,9 @@ export class RbacSeed {
           p.name.startsWith('chat:read') ||
           p.name.startsWith('assistant:use') ||
           p.name === 'user:read' ||
-          p.name === 'user:update'
+          p.name === 'user:update' ||
+          p.name === 'analytics:view' ||
+          p.name === 'dashboard:buyer'
         ),
       },
     ];

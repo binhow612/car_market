@@ -18,6 +18,7 @@ import { RbacModule } from './modules/rbac/rbac.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { RatingsModule } from './modules/ratings/ratings.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { RatingsModule } from './modules/ratings/ratings.module';
     CommentsModule,
     NotificationsModule,
     RatingsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

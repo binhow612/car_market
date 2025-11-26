@@ -135,7 +135,58 @@ export function Header() {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <Shield className="h-4 w-4 mr-3" />
+                        Admin Panel
+                      </Link>
+                    )}
+
+                    {/* Analytics Dashboards */}
+                    {hasRole('super_admin') && (
+                      <Link
+                        to="/dashboard/super-admin"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Shield className="h-4 w-4 mr-3" />
+                        Super Admin Dashboard
+                      </Link>
+                    )}
+
+                    {(hasRole('admin') || hasPermission('dashboard:admin')) && (
+                      <Link
+                        to="/dashboard/admin"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Shield className="h-4 w-4 mr-3" />
                         Admin Dashboard
+                      </Link>
+                    )}
+
+                    {(hasRole('moderator') || hasPermission('analytics:view')) && (
+                      <Link
+                        to="/dashboard/moderator"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Shield className="h-4 w-4 mr-3" />
+                        Moderator Dashboard
+                      </Link>
+                    )}
+
+                    {(hasRole('seller') || hasPermission('dashboard:seller')) && (
+                      <Link
+                        to="/dashboard/seller"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Shield className="h-4 w-4 mr-3" />
+                        Seller Dashboard
+                      </Link>
+                    )}
+
+                    {(hasRole('buyer') || hasPermission('dashboard:buyer')) && (
+                      <Link
+                        to="/dashboard/buyer"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Shield className="h-4 w-4 mr-3" />
+                        Buyer Dashboard
                       </Link>
                     )}
 
