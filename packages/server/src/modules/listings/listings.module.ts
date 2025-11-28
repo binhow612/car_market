@@ -13,6 +13,8 @@ import { ChatConversation } from '../../entities/chat-conversation.entity';
 import { LogsModule } from '../logs/logs.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { RecommendationsModule } from '../recommendations/recommendations.module';
+import { UserViewHistory } from '../../entities/user-view-history.entity';
 
 @Module({
   imports: [
@@ -25,10 +27,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
       ListingPendingChanges,
       Transaction,
       ChatConversation,
+      UserViewHistory,
     ]),
     LogsModule,
     RbacModule, // Import RbacModule to use PermissionGuard and ResourceGuard
     NotificationsModule,
+    RecommendationsModule,
   ],
   controllers: [ListingsController],
   providers: [ListingsService],

@@ -22,6 +22,7 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { MarkAsSoldDto } from './dto/mark-as-sold.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { ResourceGuard } from '../../common/guards/resource.guard';
 import { RequirePermission } from '../../common/decorators/permission.decorator';
@@ -54,8 +55,12 @@ export class ListingsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.listingsService.findOne(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() user?: User,
+  ) {
+    return this.listingsService.findOne(id, user?.id);
   }
 
   @UseGuards(JwtAuthGuard, ResourceGuard, PermissionGuard)

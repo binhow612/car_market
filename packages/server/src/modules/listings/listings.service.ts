@@ -3,9 +3,11 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Optional,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import { ChatConversation } from '../../entities/chat-conversation.entity';
 import { User } from '../../entities/user.entity';
 import {
@@ -28,6 +30,8 @@ import { hasActualChanges } from '../../utils/value-comparison.util';
 import { LogsService } from '../logs/logs.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../../entities/notification.entity';
+import { RecommendationsService } from '../recommendations/recommendations.service';
+import { UserViewHistory, ViewAction } from '../../entities/user-view-history.entity';
 
 @Injectable()
 export class ListingsService {
@@ -48,8 +52,12 @@ export class ListingsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(ChatConversation)
     private readonly conversationRepository: Repository<ChatConversation>,
+    @InjectRepository(UserViewHistory)
+    private readonly viewHistoryRepository: Repository<UserViewHistory>,
     private readonly logsService: LogsService,
     private readonly notificationsService: NotificationsService,
+    @Optional() @Inject(RecommendationsService)
+    private readonly recommendationsService?: RecommendationsService,
   ) {}
 
   /**
@@ -305,7 +313,7 @@ export class ListingsService {
     };
   }
 
-  async findOne(id: string): Promise<ListingDetail> {
+  async findOne(id: string, userId?: string): Promise<ListingDetail> {
     const listing = await this.listingRepository.findOne({
       where: { id },
       relations: ['carDetail', 'carDetail.images', 'carDetail.videos', 'seller'],
@@ -343,6 +351,14 @@ export class ListingsService {
     await this.listingRepository.update(id, {
       viewCount: listing.viewCount + 1,
     });
+
+    // Track view history if user is authenticated
+    if (userId) {
+      this.trackViewHistory(userId, id, ViewAction.VIEW).catch((err) => {
+        // Log but don't fail the request
+        console.error('Failed to track view history:', err);
+      });
+    }
 
     return listing;
   }
@@ -877,5 +893,70 @@ export class ListingsService {
     });
 
     return Array.from(buyerMap.values());
+  }
+
+  /**
+   * Track view history for a user
+   */
+  private async trackViewHistory(
+    userId: string,
+    listingId: string,
+    action: ViewAction,
+    viewDuration?: number,
+  ): Promise<void> {
+    try {
+      // Check if view was already tracked in the last minute (avoid duplicates)
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      const recentView = await this.viewHistoryRepository.findOne({
+        where: {
+          userId,
+          listingId,
+          action,
+          viewedAt: MoreThan(oneMinuteAgo),
+        },
+        order: { viewedAt: 'DESC' },
+      });
+
+      if (recentView) {
+        // Update existing view with new duration if provided
+        if (viewDuration !== undefined) {
+          recentView.viewDuration = viewDuration;
+          await this.viewHistoryRepository.save(recentView);
+        }
+        return;
+      }
+
+      // Create new view history entry
+      const viewHistory = this.viewHistoryRepository.create({
+        userId,
+        listingId,
+        action,
+        viewDuration: viewDuration || null,
+        viewedAt: new Date(),
+      });
+
+      await this.viewHistoryRepository.save(viewHistory);
+
+      // Invalidate recommendations cache when user views a listing
+      if (this.recommendationsService) {
+        this.recommendationsService.invalidateUserCache(userId).catch((err) => {
+          console.error('Failed to invalidate recommendations cache:', err);
+        });
+      }
+    } catch (error) {
+      // Log but don't fail the request
+      console.error('Failed to track view history:', error);
+    }
+  }
+
+  /**
+   * Track user action (contact seller, favorite, etc.)
+   */
+  async trackUserAction(
+    userId: string,
+    listingId: string,
+    action: ViewAction,
+  ): Promise<void> {
+    await this.trackViewHistory(userId, listingId, action);
   }
 }

@@ -40,6 +40,7 @@ import { formatPrice, formatNumber, formatRelativeTime } from "../lib/utils";
 import type { ListingDetail } from "../types";
 import toast from "react-hot-toast";
 import { CommentSection } from "../components/comments/CommentSection";
+import { SimilarCarsSection } from "../components/SimilarCarsSection";
 
 export function CarDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -663,6 +664,9 @@ export function CarDetailsPage() {
           sellerId={listing.sellerId}
         />
       </div>
+
+      {/* Similar Cars Section */}
+      {listing && <SimilarCarsSection listingId={listing.id} limit={3} />}
 
       {/* Phone Number Modal */}
       <Dialog open={showPhoneNumber} onOpenChange={setShowPhoneNumber}>

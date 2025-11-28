@@ -21,6 +21,7 @@ import { RatingsModule } from './modules/ratings/ratings.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { MonitoringModule } from './modules/monitoring/monitoring.module';
     AnalyticsModule,
     RedisModule,
     MonitoringModule,
+    RecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

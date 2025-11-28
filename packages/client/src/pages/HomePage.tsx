@@ -17,6 +17,7 @@ import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import { EnhancedSelect } from "../components/ui/EnhancedSelect";
 import { CarCard } from "../components/CarCard";
+import { RecommendationsSection } from "../components/RecommendationsSection";
 import { useAuthStore } from "../store/auth";
 import type { ListingDetail, SearchFilters } from "../types";
 import { ListingService } from "../services/listing.service";
@@ -767,6 +768,9 @@ export function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Recommendations Section - Only shown when user is authenticated */}
+      <RecommendationsSection limit={3} />
 
       {/* Featured Cars */}
       <section id="featured-cars-section" className="py-16 bg-white">

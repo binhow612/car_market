@@ -25,6 +25,9 @@ import { CommentReaction } from '../entities/comment-reaction.entity';
 import { CommentReport } from '../entities/comment-report.entity';
 import { Notification } from '../entities/notification.entity';
 import { SellerRating } from '../entities/seller-rating.entity';
+import { UserRecommendation } from '../entities/user-recommendation.entity';
+import { UserSearchHistory } from '../entities/user-search-history.entity';
+import { UserViewHistory } from '../entities/user-view-history.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -73,6 +76,9 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         CommentReport,
         Notification,
         SellerRating,
+        UserRecommendation,
+        UserSearchHistory,
+        UserViewHistory,
       ],
       synchronize: false,
       migrationsRun: false, // Disabled: Run migrations manually using SQL script
