@@ -302,14 +302,153 @@ export class ListingsService {
       take: limit,
     });
 
+    // Transform decimal fields to numbers for JSON serialization
+    const transformedListings = listings.map((listing) => ({
+      ...listing,
+      latitude: listing.latitude != null ? Number(listing.latitude) : null,
+      longitude: listing.longitude != null ? Number(listing.longitude) : null,
+      price: Number(listing.price),
+    }));
+
     return {
-      listings,
+      listings: transformedListings,
       pagination: {
         page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  /**
+   * Find listings within a radius of a given location
+   * Uses Haversine formula to calculate distance
+   */
+  async findNearby(
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 10,
+    page: number = 1,
+    limit: number = 50,
+  ) {
+    // Validate inputs
+    if (latitude < -90 || latitude > 90) {
+      throw new BadRequestException('Invalid latitude. Must be between -90 and 90.');
+    }
+    if (longitude < -180 || longitude > 180) {
+      throw new BadRequestException('Invalid longitude. Must be between -180 and 180.');
+    }
+    if (radiusKm < 0 || radiusKm > 1000) {
+      throw new BadRequestException('Invalid radius. Must be between 0 and 1000 km.');
+    }
+
+    const sanitizedPage = Math.max(1, Number(page) || 1);
+    const sanitizedLimit = Math.min(100, Math.max(1, Number(limit) || 50));
+
+    // Haversine formula constants
+    const earthRadiusKm = 6371;
+    const radiusRad = radiusKm / earthRadiusKm;
+
+    // Calculate bounding box for initial filtering (performance optimization)
+    const latRad = (latitude * Math.PI) / 180;
+    const deltaLat = radiusRad;
+    const deltaLng = Math.asin(Math.sin(radiusRad) / Math.cos(latRad));
+
+    const minLat = latitude - (deltaLat * 180) / Math.PI;
+    const maxLat = latitude + (deltaLat * 180) / Math.PI;
+    const minLng = longitude - (deltaLng * 180) / Math.PI;
+    const maxLng = longitude + (deltaLng * 180) / Math.PI;
+
+    // Query builder with bounding box filter
+    const queryBuilder = this.listingRepository
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.carDetail', 'carDetail')
+      .leftJoinAndSelect('carDetail.images', 'images')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .where('listing.status = :status', { status: ListingStatus.APPROVED })
+      .andWhere('listing.isActive = :isActive', { isActive: true })
+      .andWhere('listing.latitude IS NOT NULL')
+      .andWhere('listing.longitude IS NOT NULL')
+      .andWhere('listing.latitude BETWEEN :minLat AND :maxLat', {
+        minLat,
+        maxLat,
+      })
+      .andWhere('listing.longitude BETWEEN :minLng AND :maxLng', {
+        minLng,
+        maxLng,
+      });
+
+    // Get all listings in bounding box
+    const listings = await queryBuilder.getMany();
+
+    // Calculate exact distance using Haversine formula and filter by radius
+    type ListingWithDistance = {
+      listing: ListingDetail;
+      distance: number;
+    };
+
+    const listingsWithDistance = listings
+      .map((listing): ListingWithDistance | null => {
+        if (!listing.latitude || !listing.longitude) {
+          return null;
+        }
+
+        const lat1Rad = (listing.latitude * Math.PI) / 180;
+        const lat2Rad = latRad;
+        const deltaLatRad = lat2Rad - lat1Rad;
+        const deltaLngRad = ((listing.longitude - longitude) * Math.PI) / 180;
+
+        const a =
+          Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2) +
+          Math.cos(lat1Rad) *
+            Math.cos(lat2Rad) *
+            Math.sin(deltaLngRad / 2) *
+            Math.sin(deltaLngRad / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = earthRadiusKm * c;
+
+        return {
+          listing,
+          distance,
+        };
+      })
+      .filter((item): item is ListingWithDistance => item !== null && item.distance <= radiusKm)
+      .sort((a, b) => a.distance - b.distance);
+
+    // Apply pagination
+    const total = listingsWithDistance.length;
+    const skip = (sanitizedPage - 1) * sanitizedLimit;
+    const paginatedResults = listingsWithDistance.slice(
+      skip,
+      skip + sanitizedLimit,
+    );
+
+    // Transform decimal fields to numbers for JSON serialization
+    const transformedListings = paginatedResults.map((item) => ({
+      ...item.listing,
+      latitude: item.listing.latitude != null ? Number(item.listing.latitude) : null,
+      longitude: item.listing.longitude != null ? Number(item.listing.longitude) : null,
+      price: Number(item.listing.price),
+    }));
+
+    return {
+      listings: transformedListings,
+      distances: paginatedResults.map((item) => ({
+        listingId: item.listing.id,
+        distance: Math.round(item.distance * 10) / 10, // Round to 1 decimal place
+      })),
+      pagination: {
+        page: sanitizedPage,
+        limit: sanitizedLimit,
+        total,
+        totalPages: Math.ceil(total / sanitizedLimit),
+      },
+      center: {
+        latitude,
+        longitude,
+      },
+      radius: radiusKm,
     };
   }
 
@@ -360,7 +499,15 @@ export class ListingsService {
       });
     }
 
-    return listing;
+    // Transform decimal fields to numbers for JSON serialization
+    const transformedListing = {
+      ...listing,
+      latitude: listing.latitude != null ? Number(listing.latitude) : null,
+      longitude: listing.longitude != null ? Number(listing.longitude) : null,
+      price: Number(listing.price),
+    } as ListingDetail;
+
+    return transformedListing;
   }
 
   async update(
@@ -407,7 +554,8 @@ export class ListingsService {
     // Check for listing changes
     (Object.entries(listingData) as [keyof UpdateListingDto, unknown][]) .forEach(([key, value]) => {
       const allowedKeys: Array<keyof UpdateListingDto> = [
-        'title', 'description', 'price', 'priceType', 'location', 'city', 'state', 'country', 'carDetail', 'images'
+        'title', 'description', 'price', 'priceType', 'location', 'city', 'state', 'country', 
+        'latitude', 'longitude', 'carDetail', 'images'
       ];
       if (!allowedKeys.includes(key)) return;
       if (value !== undefined && hasActualChanges((originalValues as any)[key], value)) {

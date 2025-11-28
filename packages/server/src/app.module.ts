@@ -22,6 +22,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module';
+import { GeocodingModule } from './modules/geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { RecommendationsModule } from './modules/recommendations/recommendations
     RedisModule,
     MonitoringModule,
     RecommendationsModule,
+    GeocodingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Search,
   Filter,
@@ -11,6 +11,8 @@ import {
   Leaf,
   Wrench,
   Mountain,
+  Map,
+  List,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -18,16 +20,21 @@ import { Card, CardContent } from "../components/ui/Card";
 import { EnhancedSelect } from "../components/ui/EnhancedSelect";
 import { CarCard } from "../components/CarCard";
 import { RecommendationsSection } from "../components/RecommendationsSection";
+import { ListingMap } from "../components/ListingMap";
 import { useAuthStore } from "../store/auth";
 import type { ListingDetail, SearchFilters } from "../types";
 import { ListingService } from "../services/listing.service";
 import { useMetadata } from "../services/metadata.service";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
+
+const MAP_VIEW_FETCH_LIMIT = 500;
 
 export function HomePage() {
   const { user } = useAuthStore();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState<ListingDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(""); // Search query (auto-applied)
@@ -39,6 +46,15 @@ export function HomePage() {
   const { metadata, loading: metadataLoading, error: metadataError } = useMetadata();
   const [selectedMakeId, setSelectedMakeId] = useState<string>("");
   const [availableModels, setAvailableModels] = useState<any[]>([]);
+  
+  // Initialize viewMode from URL query params, default to "list"
+  const [viewMode, setViewMode] = useState<"list" | "map">(() => {
+    const viewParam = searchParams.get("view");
+    return (viewParam === "map" || viewParam === "list") ? viewParam : "list";
+  });
+  const [mapListings, setMapListings] = useState<ListingDetail[]>([]);
+  const [mapLoading, setMapLoading] = useState(false);
+  const mapFiltersSignatureRef = useRef<string>("");
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -104,6 +120,19 @@ export function HomePage() {
       sortOrder: "DESC" as const,
     },
   ];
+
+  // Sync viewMode with URL query params when URL changes (e.g., back button)
+  useEffect(() => {
+    const viewParam = searchParams.get("view");
+    if (viewParam === "map" || viewParam === "list") {
+      if (viewMode !== viewParam) {
+        setViewMode(viewParam);
+      }
+    } else if (!viewParam && viewMode !== "list") {
+      // If no view param and current viewMode is not "list", set to "list"
+      setViewMode("list");
+    }
+  }, [searchParams]);
 
   // Show welcome message for OAuth users (only once)
   useEffect(() => {
@@ -344,24 +373,91 @@ export function HomePage() {
   }, [selectedMakeId, metadata]);
 
   // Helper function to check if there are active filters (accepts filters parameter)
-  const hasActiveFilters = (filtersToCheck?: SearchFilters) => {
-    const filters = filtersToCheck || appliedFilters;
-    return (
-      searchQuery.trim() ||
-      filters.make ||
-      filters.model ||
-      filters.yearMin ||
-      filters.yearMax ||
-      (filters.priceMin && filters.priceMin > 0) ||
-      (filters.priceMax && filters.priceMax < 100000000) ||
-      filters.mileageMax ||
-      filters.fuelType ||
-      filters.transmission ||
-      filters.bodyType ||
-      filters.condition ||
-      filters.location
-    );
-  };
+  const hasActiveFilters = useCallback(
+    (filtersToCheck?: SearchFilters) => {
+      const filters = filtersToCheck || appliedFilters;
+      const queryValue =
+        filtersToCheck && "query" in filtersToCheck
+          ? (filtersToCheck.query || "").toString().trim()
+          : searchQuery.trim();
+      return (
+        queryValue ||
+        filters.make ||
+        filters.model ||
+        filters.yearMin ||
+        filters.yearMax ||
+        (filters.priceMin && filters.priceMin > 0) ||
+        (filters.priceMax && filters.priceMax < 100000000) ||
+        filters.mileageMax ||
+        filters.fuelType ||
+        filters.transmission ||
+        filters.bodyType ||
+        filters.condition ||
+        filters.location
+      );
+    },
+    [appliedFilters, searchQuery]
+  );
+
+  // Fetch comprehensive dataset for map view (without pagination limits)
+  useEffect(() => {
+    if (viewMode !== "map") {
+      return;
+    }
+
+    const fetchMapListings = async () => {
+      const trimmedQuery = searchQuery.trim();
+      const filtersForMap: SearchFilters = {
+        ...appliedFilters,
+        page: 1,
+        limit: MAP_VIEW_FETCH_LIMIT,
+        sortBy: appliedFilters.sortBy || "createdAt",
+        sortOrder: (appliedFilters.sortOrder as "ASC" | "DESC") || "DESC",
+        ...(trimmedQuery && { query: trimmedQuery }),
+      };
+
+      const signature = JSON.stringify(filtersForMap);
+      if (
+        mapFiltersSignatureRef.current === signature &&
+        mapListings.length > 0
+      ) {
+        return;
+      }
+
+      mapFiltersSignatureRef.current = signature;
+      setMapLoading(true);
+
+      try {
+        let response;
+        if (hasActiveFilters(filtersForMap)) {
+          response = await ListingService.searchListings(filtersForMap);
+        } else {
+          response = (await ListingService.getListings(
+            1,
+            MAP_VIEW_FETCH_LIMIT
+          )) as {
+            listings: ListingDetail[];
+          };
+        }
+        setMapListings(response.listings || []);
+      } catch (error) {
+        console.error("Failed to fetch listings for map view:", error);
+        if (!mapListings.length) {
+          toast.error("Unable to load listings on the map. Please try again.");
+        }
+      } finally {
+        setMapLoading(false);
+      }
+    };
+
+    fetchMapListings();
+  }, [
+    viewMode,
+    appliedFilters,
+    searchQuery,
+    hasActiveFilters,
+    mapListings.length,
+  ]);
 
   // Remove a specific filter
   const removeFilter = (filterKey: keyof SearchFilters) => {
@@ -807,6 +903,47 @@ export function HomePage() {
             </div>
           </div>
 
+          {/* View Toggle - List/Map */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                onClick={() => {
+                  setViewMode("list");
+                  const newSearchParams = new URLSearchParams(searchParams);
+                  newSearchParams.set("view", "list");
+                  setSearchParams(newSearchParams, { replace: true });
+                }}
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <List className="h-4 w-4" />
+                List View
+              </Button>
+              <Button
+                variant={viewMode === "map" ? "default" : "outline"}
+                onClick={() => {
+                  setViewMode("map");
+                  const newSearchParams = new URLSearchParams(searchParams);
+                  newSearchParams.set("view", "map");
+                  setSearchParams(newSearchParams, { replace: true });
+                }}
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Map className="h-4 w-4" />
+                Map View
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+          </div>
+
           {/* Filter Panel */}
           {showFilters && metadata && (
             <Card className="mb-8">
@@ -1128,34 +1265,57 @@ export function HomePage() {
             </Card>
           )}
 
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <div className="h-48 bg-gray-200 rounded-t-lg"></div>
-                  <CardContent className="p-6">
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                    <div className="flex justify-between">
-                      <div className="h-4 bg-gray-200 rounded w-20"></div>
-                      <div className="h-4 bg-gray-200 rounded w-16"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          {/* Map View or List View */}
+          {viewMode === "map" ? (
+            <div className="w-full rounded-lg overflow-hidden border border-gray-200 shadow-lg mb-6" style={{ height: "600px", minHeight: "600px" }}>
+              {mapLoading ? (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-gray-600">Loading all listings on the map...</p>
+                  </div>
+                </div>
+              ) : (
+                <ListingMap
+                  listings={mapListings}
+                  onMarkerClick={(listing) => {
+                    navigate(`/cars/${listing.id}`);
+                  }}
+                />
+              )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.map((listing, index) => (
-                <div
-                  key={`${listing.id}-${user?.id || "anonymous"}`}
-                  className="car-card-fade-in-up"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <CarCard listing={listing} />
+            <>
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, i) => (
+                    <Card key={i} className="animate-pulse">
+                      <div className="h-48 bg-gray-200 rounded-t-lg"></div>
+                      <CardContent className="p-6">
+                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-6 bg-gray-200 rounded mb-4"></div>
+                        <div className="flex justify-between">
+                          <div className="h-4 bg-gray-200 rounded w-20"></div>
+                          <div className="h-4 bg-gray-200 rounded w-16"></div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {listings.map((listing, index) => (
+                    <div
+                      key={`${listing.id}-${user?.id || "anonymous"}`}
+                      className="car-card-fade-in-up"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <CarCard listing={listing} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {!loading && listings.length === 0 && (

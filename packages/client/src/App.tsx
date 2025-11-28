@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster, toast } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -20,6 +20,7 @@ import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { PublicRoute } from "./components/PublicRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SuperAdminDashboard } from "./pages/dashboards/SuperAdminDashboard";
 import { AdminDashboard } from "./pages/dashboards/AdminDashboard";
 import { ModeratorDashboard } from "./pages/dashboards/ModeratorDashboard";
@@ -124,7 +125,9 @@ function App() {
                     path="/conversations"
                     element={
                       <ProtectedRoute>
-                        <ConversationsListPage />
+                        <ErrorBoundary>
+                          <ConversationsListPage />
+                        </ErrorBoundary>
                       </ProtectedRoute>
                     }
                   />
@@ -215,14 +218,12 @@ function App() {
                     color: "#fff",
                   },
                   className: "toast-with-close",
-                  closeButton: true,
                   success: {
                     duration: 4000,
                     style: {
                       background: "#363636",
                       color: "#fff",
                     },
-                    closeButton: true,
                   },
                   error: {
                     duration: 4000,
@@ -230,7 +231,6 @@ function App() {
                       background: "#363636",
                       color: "#fff",
                     },
-                    closeButton: true,
                   },
                 }}
                 containerStyle={{

@@ -10,6 +10,8 @@ export interface CreateListingPayload {
   city?: string;
   state?: string;
   country?: string;
+  latitude?: number;
+  longitude?: number;
   carDetail: {
     make: string;
     model: string;
@@ -79,6 +81,33 @@ export class ListingService {
 
   static async searchListings(filters: SearchFilters): Promise<SearchResponse> {
     return apiClient.get<SearchResponse>("/search", filters);
+  }
+
+  static async searchNearby(
+    latitude: number,
+    longitude: number,
+    radius: number = 10,
+    page: number = 1,
+    limit: number = 50
+  ): Promise<{
+    listings: ListingDetail[];
+    distances: Array<{ listingId: string; distance: number }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+    center: { latitude: number; longitude: number };
+    radius: number;
+  }> {
+    return apiClient.get("/listings/search/nearby", {
+      lat: latitude,
+      lng: longitude,
+      radius,
+      page,
+      limit,
+    });
   }
 
   static async uploadCarImages(files: File[]): Promise<{

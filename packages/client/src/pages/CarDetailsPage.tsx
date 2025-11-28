@@ -41,6 +41,14 @@ import type { ListingDetail } from "../types";
 import toast from "react-hot-toast";
 import { CommentSection } from "../components/comments/CommentSection";
 import { SimilarCarsSection } from "../components/SimilarCarsSection";
+import { MapView } from "../components/MapView";
+import { Marker, Popup } from "react-leaflet";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "../components/ui/Tabs";
 
 export function CarDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -309,6 +317,73 @@ export function CarDetailsPage() {
   const images = listing.carDetail.images || [];
   const videos = listing.carDetail.videos || [];
   const currentImage = images[selectedImageIndex];
+  const hasImages = images.length > 0;
+  const hasVideos = videos.length > 0;
+  const defaultMediaTab = hasImages ? "photos" : "videos";
+
+  const renderImageGallery = () => (
+    <div>
+      {currentImage && (
+        <div
+          className="aspect-video bg-gray-200 overflow-hidden rounded-t-lg cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => openImageModal(selectedImageIndex)}
+        >
+          <img
+            src={`http://localhost:3000${currentImage.url}`}
+            alt={listing.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      {images.length > 1 && (
+        <div className="p-4">
+          <div className="grid grid-cols-6 gap-2">
+            {images.map((image, index) => (
+              <button
+                key={image.id}
+                onClick={() => {
+                  setSelectedImageIndex(index);
+                  openImageModal(index);
+                }}
+                className={`aspect-square rounded-lg overflow-hidden border-2 cursor-pointer ${
+                  index === selectedImageIndex
+                    ? "border-blue-500"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <img
+                  src={`http://localhost:3000${image.url}`}
+                  alt={`Car image ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderVideoGallery = () => (
+    <div className="p-4 space-y-4">
+      {videos.map((video) => (
+        <div key={video.id}>
+          <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
+            <video
+              src={`http://localhost:3000${video.url}`}
+              controls
+              className="w-full h-full object-cover"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          {video.alt && (
+            <p className="mt-2 text-sm text-gray-600">{video.alt}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -324,84 +399,47 @@ export function CarDetailsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Images Section */}
+        {/* Media Section */}
         <div>
           <Card>
-            <CardContent className="p-0">
-              {images.length > 0 ? (
-                <>
-                  <div 
-                    className="aspect-video bg-gray-200 overflow-hidden rounded-t-lg cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => openImageModal(selectedImageIndex)}
-                  >
-                    <img
-                      src={`http://localhost:3000${currentImage.url}`}
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {images.length > 1 && (
-                    <div className="p-4">
-                      <div className="grid grid-cols-6 gap-2">
-                        {images.map((image, index) => (
-                          <button
-                            key={image.id}
-                            onClick={() => {
-                              setSelectedImageIndex(index);
-                              openImageModal(index);
-                            }}
-                            className={`aspect-square rounded-lg overflow-hidden border-2 cursor-pointer ${
-                              index === selectedImageIndex
-                                ? "border-blue-500"
-                                : "border-gray-200 hover:border-gray-300"
-                            }`}
-                          >
-                            <img
-                              src={`http://localhost:3000${image.url}`}
-                              alt={`Car image ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </button>
-                        ))}
-                      </div>
+            <CardHeader>
+              <CardTitle>Media Gallery</CardTitle>
+            </CardHeader>
+            {hasImages || hasVideos ? (
+              <CardContent className="p-0">
+                {hasImages && hasVideos ? (
+                  <Tabs defaultValue={defaultMediaTab} className="w-full">
+                    <div className="px-4 pt-4">
+                      <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg">
+                        <TabsTrigger value="photos">
+                          Photos ({images.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="videos">
+                          Videos ({videos.length})
+                        </TabsTrigger>
+                      </TabsList>
                     </div>
-                  )}
-                </>
-              ) : (
+                    <TabsContent value="photos" className="mt-0">
+                      {renderImageGallery()}
+                    </TabsContent>
+                    <TabsContent value="videos" className="mt-0">
+                      {renderVideoGallery()}
+                    </TabsContent>
+                  </Tabs>
+                ) : hasImages ? (
+                  renderImageGallery()
+                ) : (
+                  renderVideoGallery()
+                )}
+              </CardContent>
+            ) : (
+              <CardContent className="p-6">
                 <div className="aspect-video bg-gray-200 flex items-center justify-center rounded-lg">
                   <Car className="w-16 h-16 text-gray-400" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Videos Section */}
-          {videos.length > 0 && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Videos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {videos.map((video) => (
-                    <div key={video.id} className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
-                      <video
-                        src={`http://localhost:3000${video.url}`}
-                        controls
-                        className="w-full h-full object-cover"
-                      >
-                        Your browser does not support the video tag.
-                      </video>
-                      {video.alt && (
-                        <p className="mt-2 text-sm text-gray-600">{video.alt}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
               </CardContent>
-            </Card>
-          )}
+            )}
+          </Card>
         </div>
 
         {/* Details Section */}
@@ -556,7 +594,7 @@ export function CarDetailsPage() {
                         className="flex items-center p-2 bg-gray-50 rounded-lg"
                       >
                         <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                        <span className="text-sm">{feature}</span>
+                        <span className="text-sm">{feature.replace(/[{}]/g, '')}</span>
                       </div>
                     ))}
                   </div>
@@ -604,6 +642,18 @@ export function CarDetailsPage() {
                   <MapPin className="w-4 h-4 text-gray-400 mr-3" />
                   <span>{listing.location}</span>
                 </div>
+                {listing.latitude && listing.longitude && (
+                  <div className="mt-4">
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${listing.latitude},${listing.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-sm underline"
+                    >
+                      Get Directions →
+                    </a>
+                  </div>
+                )}
                 {listing.status !== "sold" && (
                   <div className="flex space-x-4">
                     <Button
@@ -628,6 +678,40 @@ export function CarDetailsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Location Map */}
+          {listing.latitude && listing.longitude && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Location</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="w-full" style={{ height: "400px" }}>
+                  <MapView
+                    center={[listing.latitude, listing.longitude]}
+                    zoom={15}
+                  >
+                    <Marker position={[listing.latitude, listing.longitude]}>
+                      <Popup>
+                        <div>
+                          <p className="font-semibold">{listing.title}</p>
+                          <p className="text-sm text-gray-600">{listing.location}</p>
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${listing.latitude},${listing.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 text-sm underline mt-2 inline-block"
+                          >
+                            Get Directions →
+                          </a>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </MapView>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
@@ -661,7 +745,7 @@ export function CarDetailsPage() {
         <CommentSection 
           listingId={listing.id} 
           listingTitle={listing.title}
-          sellerId={listing.sellerId}
+          sellerId={listing.seller.id}
         />
       </div>
 

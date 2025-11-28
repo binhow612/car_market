@@ -83,6 +83,8 @@ export interface ListingDetail {
   city?: string;
   state?: string;
   country?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   viewCount: number;
   favoriteCount: number;
   inquiryCount: number;

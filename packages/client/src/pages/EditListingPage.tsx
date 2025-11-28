@@ -27,6 +27,7 @@ import { ListingService, type CreateListingPayload } from "../services/listing.s
 import { useMetadata } from "../services/metadata.service";
 import type { ListingDetail } from "../types";
 import { DraggableImageGallery } from "../components/DraggableImageGallery";
+import { LocationPicker } from "../components/LocationPicker";
 
 const editListingSchema = z.object({
   // Listing Information
@@ -89,6 +90,14 @@ export function EditListingPage() {
     numberOfDoors: "",
     numberOfSeats: "",
   });
+  const [locationData, setLocationData] = useState<{
+    latitude: number;
+    longitude: number;
+    address: string;
+    city?: string;
+    state?: string;
+    country?: string;
+  } | null>(null);
   const { metadata, loading: metadataLoading } = useMetadata();
 
 
@@ -342,6 +351,19 @@ export function EditListingPage() {
       setValue("city", response.city || "");
       setValue("state", response.state || "");
       setValue("country", response.country || "USA");
+      
+      // Set location data if coordinates exist
+      if (response.latitude && response.longitude) {
+        setLocationData({
+          latitude: response.latitude,
+          longitude: response.longitude,
+          address: response.location || "",
+          city: response.city,
+          state: response.state,
+          country: response.country,
+        });
+      }
+      
       setValue("make", response.carDetail.make);
       setValue("model", response.carDetail.model);
       
@@ -484,6 +506,8 @@ export function EditListingPage() {
         ...(data.city !== undefined && { city: data.city }),
         ...(data.state !== undefined && { state: data.state }),
         ...(data.country !== undefined && { country: data.country }),
+        ...(locationData?.latitude !== undefined && { latitude: locationData.latitude }),
+        ...(locationData?.longitude !== undefined && { longitude: locationData.longitude }),
         carDetail: {
           make: data.make,
           model: data.model,
@@ -695,53 +719,28 @@ export function EditListingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label
-                  htmlFor="location"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Location
-                </label>
-                <Input
-                  id="location"
-                  {...register("location")}
-                  className={errors.location ? "border-red-500" : ""}
-                />
-                {errors.location && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.location.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="city"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  City
-                </label>
-                <Input
-                  id="city"
-                  {...register("city")}
-                  className={errors.city ? "border-red-500" : ""}
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="state"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  State
-                </label>
-                <Input
-                  id="state"
-                  {...register("state")}
-                  className={errors.state ? "border-red-500" : ""}
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Location
+              </label>
+              <LocationPicker
+                address={listing.location || ""}
+                latitude={locationData?.latitude || listing.latitude || undefined}
+                longitude={locationData?.longitude || listing.longitude || undefined}
+                onLocationChange={(location) => {
+                  setLocationData(location);
+                  setValue("location", location.address);
+                  if (location.city) setValue("city", location.city);
+                  if (location.state) setValue("state", location.state);
+                  if (location.country) setValue("country", location.country);
+                }}
+                height="300px"
+              />
+              {errors.location && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.location.message}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Put,
+  BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -52,6 +53,27 @@ export class ListingsController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
   ) {
     return this.listingsService.findAll(page, limit);
+  }
+
+  @Get('search/nearby')
+  @ApiOperation({ summary: 'Find listings within a radius of a location' })
+  @ApiResponse({ status: 200, description: 'Listings found successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid parameters' })
+  findNearby(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('radius', new ParseIntPipe({ optional: true })) radius: number = 10,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 50,
+  ) {
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      throw new BadRequestException('Invalid latitude or longitude');
+    }
+
+    return this.listingsService.findNearby(latitude, longitude, radius, page, limit);
   }
 
   @Get(':id')

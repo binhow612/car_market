@@ -2473,39 +2473,91 @@ export function EnhancedAdminDashboard() {
                                     Listing Changes:
                                   </h6>
                                   <div className="space-y-2">
-                                    {Object.entries(change.changes.listing)
-                                      .filter(([field, newValue]) =>
-                                        shouldShowChange(
-                                          change.originalValues.listing[field],
-                                          newValue
-                                        )
-                                      )
-                                      .map(([field, newValue]) => (
-                                        <div
-                                          key={field}
-                                          className="flex items-center space-x-4 text-sm"
-                                        >
-                                          <span className="font-medium text-gray-600 w-24 capitalize">
-                                            {field
-                                              .replace(/([A-Z])/g, " $1")
-                                              .trim()}
-                                            :
-                                          </span>
-                                          <div className="flex-1">
-                                            <span className="text-red-600 line-through">
-                                              {formatDisplayValue(
-                                                change.originalValues.listing[
+                                    {(() => {
+                                      const listingChanges = Object.entries(change.changes.listing)
+                                        .filter(([field, newValue]) =>
+                                          shouldShowChange(
+                                            change.originalValues.listing[field],
+                                            newValue
+                                          )
+                                        );
+                                      
+                                      // Check if both latitude and longitude are changing
+                                      const hasLatChange = listingChanges.some(([field]) => field === "latitude");
+                                      const hasLngChange = listingChanges.some(([field]) => field === "longitude");
+                                      const hasBothCoords = hasLatChange && hasLngChange;
+                                      
+                                      return listingChanges.map(([field, newValue]) => {
+                                        // Skip individual latitude/longitude if both are changing (we'll show combined)
+                                        if (hasBothCoords && (field === "latitude" || field === "longitude")) {
+                                          // Only show the combined view once (on latitude)
+                                          if (field === "longitude") return null;
+                                          
+                                          // Show combined coordinates view
+                                          const oldLat = change.originalValues.listing.latitude;
+                                          const oldLng = change.originalValues.listing.longitude;
+                                          const newLat = change.changes.listing.latitude;
+                                          const newLng = change.changes.listing.longitude;
+                                          const locationString = change.changes.listing.location || change.originalValues.listing.location;
+                                          
+                                          return (
+                                            <div
+                                              key="location-coordinates"
+                                              className="flex items-start space-x-4 text-sm"
+                                            >
+                                              <span className="font-medium text-gray-600 w-32">
+                                                📍 Location Coordinates:
+                                              </span>
+                                              <div className="flex-1">
+                                                <div className="flex items-center flex-wrap gap-2">
+                                                  <span className="text-red-600 line-through">
+                                                    {oldLat != null && oldLng != null
+                                                      ? `${formatDisplayValue(oldLat, "latitude")}, ${formatDisplayValue(oldLng, "longitude")}`
+                                                      : "N/A"}
+                                                  </span>
+                                                  <span className="mx-2">→</span>
+                                                  <span className="text-green-600 font-medium">
+                                                    {formatDisplayValue(newLat, "latitude")}, {formatDisplayValue(newLng, "longitude")}
+                                                  </span>
+                                                </div>
+                                                {locationString && (
+                                                  <div className="mt-1 text-xs text-gray-500 italic">
+                                                    Address: {locationString}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+                                        
+                                        // Regular field display
+                                        return (
+                                          <div
+                                            key={field}
+                                            className="flex items-center space-x-4 text-sm"
+                                          >
+                                            <span className="font-medium text-gray-600 w-24 capitalize">
+                                              {field
+                                                .replace(/([A-Z])/g, " $1")
+                                                .trim()}
+                                              :
+                                            </span>
+                                            <div className="flex-1">
+                                              <span className="text-red-600 line-through">
+                                                {formatDisplayValue(
+                                                  change.originalValues.listing[field],
                                                   field
-                                                ]
-                                              )}
-                                            </span>
-                                            <span className="mx-2">→</span>
-                                            <span className="text-green-600 font-medium">
-                                              {formatDisplayValue(newValue)}
-                                            </span>
+                                                )}
+                                              </span>
+                                              <span className="mx-2">→</span>
+                                              <span className="text-green-600 font-medium">
+                                                {formatDisplayValue(newValue, field)}
+                                              </span>
+                                            </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        );
+                                      }).filter(Boolean);
+                                    })()}
                                   </div>
                                 </div>
                               )}
