@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Plus,
   Car,
@@ -16,6 +16,8 @@ import {
 } from "../components/ui/Card";
 import { CarCard } from "../components/CarCard";
 import { MarkAsSoldDialog } from "../components/listings/MarkAsSoldDialog";
+import { PromoteListingDialog } from "../components/promotions/PromoteListingDialog";
+import { PromotionService } from "../services/promotion.service";
 import {
   Dialog,
   DialogContent,
@@ -26,13 +28,15 @@ import {
 } from "../components/ui/Dialog";
 import { useAuthStore } from "../store/auth";
 import { ListingService } from "../services/listing.service";
-import type { ListingDetail } from "../types";
+import type { ListingDetail, ListingPromotion } from "../types";
 import toast from "react-hot-toast";
 import { socketService } from "../services/socket.service";
 
 export function MyListingsPage() {
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const hasLoadedPromotions = useRef(false);
   const [userListings, setUserListings] = useState<ListingDetail[]>([]);
   const [listingsLoading, setListingsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -42,6 +46,9 @@ export function MyListingsPage() {
   );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
+  const [showPromoteDialog, setShowPromoteDialog] = useState(false);
+  const [listingToPromote, setListingToPromote] = useState<ListingDetail | null>(null);
+  const [promotions, setPromotions] = useState<Map<string, ListingPromotion>>(new Map());
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -85,10 +92,57 @@ export function MyListingsPage() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchUserListings();
+      loadPromotions();
     } else {
       setListingsLoading(false);
     }
-  }, [isAuthenticated, fetchUserListings]);
+  }, [isAuthenticated]);
+
+  // Reload promotions when returning to this page (e.g., from payment page)
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Load promotions on mount
+      if (!hasLoadedPromotions.current) {
+        loadPromotions();
+        hasLoadedPromotions.current = true;
+      }
+      
+      // Reload when coming from payment page
+      if (location.state?.reloadPromotions) {
+        loadPromotions();
+        // Clear the state
+        window.history.replaceState({}, document.title);
+      }
+      
+      // Reload when page becomes visible
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          loadPromotions();
+        }
+      };
+      
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }
+  }, [isAuthenticated, location]);
+
+  const loadPromotions = async () => {
+    try {
+      const myPromotions = await PromotionService.getMyPromotions();
+      const promotionsMap = new Map<string, ListingPromotion>();
+      myPromotions.forEach((promo) => {
+        if (promo.status === 'active' && promo.listingId) {
+          promotionsMap.set(promo.listingId, promo);
+        }
+      });
+      setPromotions(promotionsMap);
+    } catch (error) {
+      console.error('Failed to load promotions:', error);
+    }
+  };
 
   // Listen for listing rejection notifications to refresh listings
   useEffect(() => {
@@ -178,6 +232,20 @@ export function MyListingsPage() {
   const handleMarkAsSoldSuccess = () => {
     // Reload listings
     fetchUserListings();
+  };
+
+  const handlePromote = (listing: ListingDetail) => {
+    if (listing.status !== 'approved') {
+      toast.error('Chỉ có thể đẩy tin đã được duyệt');
+      return;
+    }
+    setListingToPromote(listing);
+    setShowPromoteDialog(true);
+  };
+
+  const handlePromoteSuccess = () => {
+    fetchUserListings();
+    loadPromotions();
   };
 
   const sortListings = (listingsToSort: ListingDetail[]) => {
@@ -284,16 +352,23 @@ export function MyListingsPage() {
               </div>
             ) : userListings.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortListings(userListings).map((listing) => (
+                {sortListings(userListings).map((listing) => {
+                  const promotion = promotions.get(listing.id);
+                  const hasActivePromotion = promotion && promotion.status === 'active' && new Date(promotion.endDate) > new Date();
+                  return (
+                    <div key={listing.id} className="relative">
                   <CarCard
-                    key={listing.id}
                     listing={listing}
                     showActions={true}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onMarkAsSold={handleMarkAsSold}
+                        onPromote={listing.status === 'approved' && !hasActivePromotion ? () => handlePromote(listing) : undefined}
+                        promotion={hasActivePromotion ? promotion : undefined}
                   />
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-12">
@@ -410,6 +485,19 @@ export function MyListingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Promote Listing Dialog */}
+      {listingToPromote && (
+        <PromoteListingDialog
+          listing={listingToPromote}
+          open={showPromoteDialog}
+          onClose={() => {
+            setShowPromoteDialog(false);
+            setListingToPromote(null);
+          }}
+          onSuccess={handlePromoteSuccess}
+        />
+      )}
 
       {/* Mark as Sold Dialog */}
       {listingToMarkSold && (

@@ -24,6 +24,8 @@ import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 import { GeocodingModule } from './modules/geocoding/geocoding.module';
 import { SellerVerificationModule } from './modules/seller-verification/seller-verification.module';
+import { PromotionsModule } from './modules/promotions/promotions.module';
+import { PaymentModule } from './modules/payment/payment.module';
 
 @Module({
   imports: [
@@ -56,6 +58,8 @@ import { SellerVerificationModule } from './modules/seller-verification/seller-v
     RecommendationsModule,
     GeocodingModule,
     SellerVerificationModule,
+    PromotionsModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

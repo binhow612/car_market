@@ -395,6 +395,18 @@ export function CarDetailsPage() {
     </div>
   );
 
+  const formatFeatureName = (feature: string): string => {
+    // Remove curly braces if present
+    let formatted = feature.replace(/[{}]/g, '');
+    // Replace underscores with spaces
+    formatted = formatted.replace(/_/g, ' ');
+    // Capitalize each word
+    return formatted
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back Button */}
@@ -604,7 +616,7 @@ export function CarDetailsPage() {
                         className="flex items-center p-2 bg-gray-50 rounded-lg"
                       >
                         <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                        <span className="text-sm">{feature.replace(/[{}]/g, '')}</span>
+                        <span className="text-sm">{formatFeatureName(feature)}</span>
                       </div>
                     ))}
                   </div>

@@ -32,6 +32,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../../entities/notification.entity';
 import { RecommendationsService } from '../recommendations/recommendations.service';
 import { UserViewHistory, ViewAction } from '../../entities/user-view-history.entity';
+import { PromotionStatus } from '../../entities/listing-promotion.entity';
 
 @Injectable()
 export class ListingsService {
@@ -287,20 +288,37 @@ export class ListingsService {
   }
 
   async findAll(page: number = 1, limit: number = 10) {
-    // Get all active listings (both approved and sold) with proper ordering
-    const [listings, total] = await this.listingRepository.findAndCount({
-      where: [
-        { status: ListingStatus.APPROVED, isActive: true },
-        { status: ListingStatus.SOLD, isActive: true },
-      ],
-      relations: ['carDetail', 'carDetail.images', 'carDetail.videos', 'seller'],
-      order: {
-        status: 'ASC', // Approved first, then sold
-        createdAt: 'DESC',
-      },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    // Get all active listings with promotions
+    const now = new Date();
+    const queryBuilder = this.listingRepository
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.carDetail', 'carDetail')
+      .leftJoinAndSelect('carDetail.images', 'images')
+      .leftJoinAndSelect('carDetail.videos', 'videos')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .leftJoin(
+        'listing_promotions',
+        'promotion',
+        'promotion.listingId = listing.id AND promotion.status = :promoStatus AND promotion.endDate > :now',
+        { promoStatus: PromotionStatus.ACTIVE, now },
+      )
+      .addSelect('promotion.endDate', 'promotion_endDate')
+      .where('listing.status IN (:...statuses)', {
+        statuses: [ListingStatus.APPROVED, ListingStatus.SOLD],
+      })
+      .andWhere('listing.isActive = :isActive', { isActive: true })
+      .orderBy('promotion.endDate', 'DESC', 'NULLS LAST') // Promoted listings first, sorted by endDate DESC
+      .addOrderBy('listing.isFeatured', 'DESC') // Featured listings next
+      .addOrderBy('listing.createdAt', 'DESC'); // Then by creation date
+
+    // Get total count
+    const total = await queryBuilder.getCount();
+
+    // Apply pagination
+    const listings = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
 
     // Transform decimal fields to numbers for JSON serialization
     const transformedListings = listings.map((listing) => ({

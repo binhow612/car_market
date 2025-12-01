@@ -18,6 +18,9 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { NotificationPreferencesPage } from "./pages/NotificationPreferencesPage";
 import { EnhancedAdminDashboard } from "./pages/EnhancedAdminDashboard";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
+import { PaymentCallbackPage } from "./pages/PaymentCallbackPage";
+import { PaymentPage } from "./pages/PaymentPage";
+import { PayOSCallbackPage } from "./pages/PayOSCallbackPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { PublicRoute } from "./components/PublicRoute";
@@ -78,6 +81,26 @@ function App() {
                     }
                   />
                   <Route path="/auth/callback" element={<AuthCallbackPage />} />
+                  <Route
+                    path="/promotions/:id/pay"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/promotions/:id/payment/:status"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentCallbackPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/promotions/payos-callback"
+                    element={<PayOSCallbackPage />}
+                  />
                   <Route path="/cars/:id" element={<CarDetailsPage />} />
                   <Route path="/users/:id" element={<UserProfilePage />} />
 

@@ -31,6 +31,8 @@ import { UserViewHistory } from '../entities/user-view-history.entity';
 import { SellerVerification } from '../entities/seller-verification.entity';
 import { SellerVerificationDocument } from '../entities/seller-verification-document.entity';
 import { PhoneVerificationOtp } from '../entities/phone-verification-otp.entity';
+import { ListingPromotion } from '../entities/listing-promotion.entity';
+import { PromotionPricing } from '../entities/promotion-pricing.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -85,6 +87,8 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         SellerVerification,
         SellerVerificationDocument,
         PhoneVerificationOtp,
+        ListingPromotion,
+        PromotionPricing,
       ],
       synchronize: false,
       migrationsRun: false, // Disabled: Run migrations manually using SQL script

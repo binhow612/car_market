@@ -15,6 +15,7 @@ import { RbacModule } from '../rbac/rbac.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RecommendationsModule } from '../recommendations/recommendations.module';
 import { UserViewHistory } from '../../entities/user-view-history.entity';
+import { ListingPromotion } from '../../entities/listing-promotion.entity';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { UserViewHistory } from '../../entities/user-view-history.entity';
       Transaction,
       ChatConversation,
       UserViewHistory,
+      ListingPromotion,
     ]),
     LogsModule,
     RbacModule, // Import RbacModule to use PermissionGuard and ResourceGuard

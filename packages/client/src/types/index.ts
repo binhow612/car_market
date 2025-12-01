@@ -212,3 +212,63 @@ export interface RatingsResponse {
   ratings: SellerRating[];
   pagination: PaginationInfo;
 }
+
+export enum PromotionPackageType {
+  ONE_DAY = '1_day',
+  THREE_DAYS = '3_days',
+  SEVEN_DAYS = '7_days',
+}
+
+export enum PromotionStatus {
+  PENDING = 'pending',
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  CANCELLED = 'cancelled',
+}
+
+export enum PaymentStatus {
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  REFUNDED = 'refunded',
+}
+
+export interface PromotionPricing {
+  packageType: PromotionPackageType;
+  price: number;
+  durationDays: number;
+  pricePerDay: number;
+}
+
+export interface ListingPromotion {
+  id: string;
+  listingId: string;
+  sellerId: string;
+  packageType: PromotionPackageType;
+  startDate: string | null;
+  endDate: string;
+  amount: number;
+  status: PromotionStatus;
+  paymentMethod?: string;
+  paymentReference?: string;
+  paymentTransactionId?: string;
+  paymentStatus: PaymentStatus;
+  createdAt: string;
+  updatedAt: string;
+  listing?: ListingDetail;
+  daysRemaining?: number;
+}
+
+export interface CreatePromotionRequest {
+  listingId: string;
+  packageType: PromotionPackageType;
+}
+
+export interface CreatePromotionResponse {
+  promotionId: string;
+  amount: number;
+  packageType: PromotionPackageType;
+  durationDays: number;
+  endDate: string;
+  paymentUrl: string;
+}

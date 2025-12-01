@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import {
   Car,
   MapPin,
-  Calendar,
   Fuel,
   Eye,
   Heart,
@@ -19,12 +18,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "./ui/Dialog";
-import { formatPrice, formatNumber, formatRelativeTime } from "../lib/utils";
+import { formatPrice, formatNumber } from "../lib/utils";
 import { FavoritesService } from "../services/favorites.service";
 import { ChatService } from "../services/chat.service";
 import { useAuthStore } from "../store/auth";
 import toast from "react-hot-toast";
-import type { ListingDetail } from "../types";
+import type { ListingDetail, ListingPromotion } from "../types";
+import { PromotionBadge } from "./promotions/PromotionBadge";
 
 interface CarCardProps {
   listing: ListingDetail;
@@ -33,6 +33,8 @@ interface CarCardProps {
   onDelete?: (id: string) => void;
   onMarkAsSold?: (listing: ListingDetail) => void;
   onFavoriteChange?: (listingId: string, isFavorite: boolean) => void;
+  onPromote?: () => void;
+  promotion?: ListingPromotion;
 }
 
 export function CarCard({
@@ -42,6 +44,8 @@ export function CarCard({
   onDelete,
   onMarkAsSold,
   onFavoriteChange,
+  onPromote,
+  promotion,
 }: CarCardProps) {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
@@ -216,6 +220,11 @@ export function CarCard({
             )}
           </div>
 
+          {/* Promotion Badge */}
+          {promotion && promotion.status === "active" && (
+            <PromotionBadge promotion={promotion} />
+          )}
+
           {/* View Count */}
           <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs flex items-center">
             <Eye className="w-3 h-3 mr-1" />
@@ -285,11 +294,7 @@ export function CarCard({
           </div>
 
           {/* Meta Info */}
-          <div className="flex items-center justify-between text-xs text-gray-500 flex-shrink-0">
-            <div className="flex items-center">
-              <Calendar className="w-3 h-3 mr-1" />
-              {formatRelativeTime(listing.createdAt)}
-            </div>
+          <div className="flex items-center justify-end text-xs text-gray-500 flex-shrink-0">
             <div className="flex items-center space-x-3">
               <div className="flex items-center">
                 <Heart className="w-3 h-3 mr-1" />
@@ -378,6 +383,19 @@ export function CarCard({
                   Delete
                 </Button>
                 {listing.status === "approved" && (
+                  <>
+                    {onPromote && (
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-yellow-500 text-yellow-900 hover:bg-yellow-600"
+                        onClick={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                          onPromote();
+                        }}
+                      >
+                        Promote
+                      </Button>
+                    )}
                   <Button
                     size="sm"
                     className="flex-1 bg-green-600 text-white hover:bg-green-700"
@@ -388,6 +406,7 @@ export function CarCard({
                   >
                     Mark as Sold
                   </Button>
+                  </>
                 )}
               </div>
             )}
