@@ -9,6 +9,7 @@ import {
 import { Button } from "../components/ui/Button";
 import { Card, CardContent } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
+import { getMediaUrl } from "../lib/utils";
 import { ChatService } from "../services/chat.service";
 import { useAuthStore } from "../store/auth";
 import { useNotifications } from "../hooks/useNotifications";
@@ -219,12 +220,8 @@ export function ConversationsListPage() {
                         <Avatar
                           src={
                             user?.id === conversation.buyer.id
-                              ? conversation.seller.profileImage
-                                ? `http://localhost:3000${conversation.seller.profileImage}`
-                                : undefined
-                              : conversation.buyer.profileImage
-                                ? `http://localhost:3000${conversation.buyer.profileImage}`
-                                : undefined
+                              ? getMediaUrl(conversation.seller.profileImage) ?? ""
+                              : getMediaUrl(conversation.buyer.profileImage) ?? ""
                           }
                           alt={`${otherUser.firstName || ""} ${otherUser.lastName || ""}`}
                           size="md"
