@@ -598,7 +598,7 @@ export function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden text-white py-20 md:py-24">
+      <section className="relative text-white py-20 md:py-24">
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -610,7 +610,7 @@ export function HomePage() {
           <div className="absolute inset-0 bg-black/40"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-[45]">
           <div className="text-center">
             {/* Main Heading */}
             <h1 className="text-4xl md:text-6xl font-bold mb-6 hero-fade-in-up">
