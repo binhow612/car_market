@@ -28,7 +28,7 @@ import { ListingService } from "../services/listing.service";
 import { useMetadata } from "../services/metadata.service";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { getMediaUrl, handleImageError, CAR_PLACEHOLDER_IMAGE } from "../lib/utils";
+import { getMediaUrl, handleImageError, CAR_PLACEHOLDER_IMAGE, cn } from "../lib/utils";
 
 const MAP_VIEW_FETCH_LIMIT = 500;
 
@@ -1014,8 +1014,9 @@ export function HomePage() {
           {/* View Toggle - List/Map */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
+              {/* Nút List View */}
               <Button
-                variant={viewMode === "list" ? "default" : "outline"}
+                variant="outline" // Luôn dùng style cơ bản (xám)
                 onClick={() => {
                   setViewMode("list");
                   const newSearchParams = new URLSearchParams(searchParams);
@@ -1023,13 +1024,20 @@ export function HomePage() {
                   setSearchParams(newSearchParams, { replace: true });
                 }}
                 size="sm"
-                className="flex items-center gap-2"
+                // Nếu đang chọn chế độ List -> Ép cứng màu đen (active state)
+                // Nếu không -> Giữ nguyên màu xám (default state)
+                className={cn(
+                  "flex items-center gap-2 transition-all",
+                  viewMode === "list" && "bg-black text-white hover:bg-black/90 shadow-md"
+                )}
               >
                 <List className="h-4 w-4" />
                 List View
               </Button>
+
+              {/* Nút Map View */}
               <Button
-                variant={viewMode === "map" ? "default" : "outline"}
+                variant="outline"
                 onClick={() => {
                   setViewMode("map");
                   const newSearchParams = new URLSearchParams(searchParams);
@@ -1037,15 +1045,25 @@ export function HomePage() {
                   setSearchParams(newSearchParams, { replace: true });
                 }}
                 size="sm"
-                className="flex items-center gap-2"
+                className={cn(
+                  "flex items-center gap-2 transition-all",
+                  viewMode === "map" && "bg-black text-white hover:bg-black/90 shadow-md"
+                )}
               >
                 <Map className="h-4 w-4" />
                 Map View
               </Button>
             </div>
+
+            {/* Nút Filter */}
             <Button
-              variant="outline"
+              variant="outline" // Đổi từ outline sang default để đồng bộ theme
               onClick={() => setShowFilters(!showFilters)}
+              // Thêm logic: Nếu đang mở filter thì nút chuyển sang màu đen
+              className={cn(
+                "transition-all",
+                showFilters && "bg-black text-white hover:bg-black/90"
+              )}
             >
               <Filter className="h-4 w-4 mr-2" />
               Filters
