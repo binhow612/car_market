@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
 
 interface PermissionGateProps {
@@ -42,10 +42,10 @@ export function PermissionGate({
   showError = false,
 }: PermissionGateProps) {
   const {
-    hasPermission,
+    //hasPermission,
     hasAnyPermission,
     hasAllPermissions,
-    hasRole,
+    //hasRole,
     hasAnyRole,
   } = usePermissions();
 
