@@ -13,6 +13,7 @@ import {
   Mountain,
   Map,
   List,
+  Star,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -55,6 +56,11 @@ export function HomePage() {
   const [mapListings, setMapListings] = useState<ListingDetail[]>([]);
   const [mapLoading, setMapLoading] = useState(false);
   const mapFiltersSignatureRef = useRef<string>("");
+
+  // State mới cho gợi ý
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -121,6 +127,45 @@ export function HomePage() {
     },
   ];
 
+  // Xử lý click ra ngoài để đóng gợi ý
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Hàm fetch gợi ý (debounce thủ công hoặc dùng lodash nếu có)
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (searchQuery.trim().length >= 2) {
+        try {
+          const results = await ListingService.getSuggestions(searchQuery);
+          setSuggestions(results);
+          setShowSuggestions(true);
+        } catch (error) {
+          console.error("Error fetching suggestions:", error);
+        }
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchSuggestions, 300); // Debounce 300ms
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Hàm xử lý khi chọn gợi ý
+  const handleSuggestionClick = (listingId: string) => {
+    navigate(`/cars/${listingId}`);
+    setShowSuggestions(false);
+  };
+
+  
   // Sync viewMode with URL query params when URL changes (e.g., back button)
   useEffect(() => {
     const viewParam = searchParams.get("view");
@@ -592,7 +637,7 @@ export function HomePage() {
             {/* Search Bar with Quick Filters */}
             <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg p-6 md:p-8 text-black hero-fade-in-up" style={{ animationDelay: '0.6s', opacity: 0 }}>
               {/* Main Search Bar */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-4 mb-6 relative" ref={searchContainerRef}>
                 <div className="flex-1 relative">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
                   <Input
@@ -600,8 +645,65 @@ export function HomePage() {
                     placeholder="Search by make, model, or keyword..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => {
+                      if (suggestions.length > 0) setShowSuggestions(true);
+                    }}
                     className="pl-10 h-12 text-lg text-gray-900 bg-gray-50 border-gray-300"
                   />
+                  
+                  {/* Container Gợi ý */}
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-xl border border-gray-100 z-50 overflow-hidden">
+                      {suggestions.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => handleSuggestionClick(item.id)}
+                          className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition-colors"
+                        >
+                          {/* Hình ảnh xe */}
+                          <div className="h-12 w-16 flex-shrink-0 bg-gray-200 rounded overflow-hidden mr-4">
+                            {item.thumbnail ? (
+                              <img 
+                                src={`http://localhost:3000${item.thumbnail}`} 
+                                alt={item.title}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-gray-400">
+                                <Car size={20} />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Thông tin xe */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-gray-900 truncate">
+                              {item.title}
+                            </h4>
+                            <div className="flex items-center text-xs text-gray-500 mt-1">
+                              <span className="capitalize bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 mr-2">
+                                {item.condition}
+                              </span>
+                              {item.sellerRating > 0 && (
+                                <div className="flex items-center text-yellow-500">
+                                  <span className="font-medium mr-0.5">{item.sellerRating}</span>
+                                  <Star size={10} fill="currentColor" />
+                                  <span className="text-gray-400 ml-1">({item.sellerReviewCount})</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Giá tiền */}
+                          <div className="text-right ml-4">
+                            <span className="text-blue-600 font-bold text-sm">
+                              ${item.price.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1325,21 +1427,19 @@ export function HomePage() {
                                 : l
                             )
                           );
-                          // Also update mapListings if in map view
-                          if (viewMode === "map") {
-                            setMapListings((prev) =>
-                              prev.map((l) =>
-                                l.id === listingId
-                                  ? {
-                                      ...l,
-                                      favoriteCount: isFavorite
-                                        ? l.favoriteCount + 1
-                                        : Math.max(0, l.favoriteCount - 1),
-                                    }
-                                  : l
-                              )
-                            );
-                          }
+                          // Also update mapListings
+                          setMapListings((prev) =>
+                            prev.map((l) =>
+                              l.id === listingId
+                                ? {
+                                    ...l,
+                                    favoriteCount: isFavorite
+                                      ? l.favoriteCount + 1
+                                      : Math.max(0, l.favoriteCount - 1),
+                                  }
+                                : l
+                            )
+                          );
                         }}
                       />
                     </div>

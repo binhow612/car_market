@@ -5,6 +5,7 @@ import {
   ListingDetail,
   ListingStatus,
 } from '../../entities/listing-detail.entity';
+// import { SellerRating } from '../../entities/seller-rating.entity';
 
 export interface SearchFilters {
   // General search query
@@ -38,6 +39,55 @@ export class SearchService {
     @InjectRepository(ListingDetail)
     private readonly listingRepository: Repository<ListingDetail>,
   ) {}
+
+  async getSuggestions(query: string): Promise<any[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const searchTerm = query.trim();
+
+    const listings = await this.listingRepository
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.carDetail', 'carDetail')
+      .leftJoinAndSelect('carDetail.images', 'images')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .leftJoinAndSelect('seller.receivedRatings', 'ratings') // Join để tính điểm
+      .where('listing.status = :status', { status: ListingStatus.APPROVED })
+      .andWhere('listing.isActive = :isActive', { isActive: true })
+      .andWhere(
+        '(LOWER(carDetail.make) LIKE LOWER(:query) OR ' +
+        'LOWER(carDetail.model) LIKE LOWER(:query) OR ' +
+        'LOWER(listing.title) LIKE LOWER(:query))',
+        { query: `%${searchTerm}%` },
+      )
+      .orderBy('listing.viewCount', 'DESC') // Ưu tiên xe xem nhiều
+      .take(5) // Chỉ lấy 5 gợi ý
+      .getMany();
+
+    // Map dữ liệu để trả về format gọn nhẹ cho frontend
+    return listings.map(listing => {
+      // Tính rating trung bình
+      const ratings = listing.seller.receivedRatings || [];
+      const avgRating = ratings.length > 0
+        ? ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length
+        : 0;
+
+      // Lấy ảnh đại diện
+      const thumbnail = listing.carDetail.images?.find(img => img.isPrimary)?.url || 
+                        listing.carDetail.images?.[0]?.url || null;
+
+      return {
+        id: listing.id,
+        title: `${listing.carDetail.year} ${listing.carDetail.make} ${listing.carDetail.model}`,
+        price: listing.price,
+        thumbnail: thumbnail,
+        sellerRating: parseFloat(avgRating.toFixed(1)),
+        sellerReviewCount: ratings.length,
+        condition: listing.carDetail.condition
+      };
+    });
+  }
 
   async search(filters: SearchFilters) {
     const {

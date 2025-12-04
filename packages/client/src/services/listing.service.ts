@@ -53,7 +53,20 @@ export interface CreateListingPayload {
   }[];
 }
 
+export interface SearchSuggestion {
+  id: string;
+  title: string;
+  price: number;
+  thumbnail: string | null;
+  sellerRating: number;
+  sellerReviewCount: number;
+  condition: string;
+}
+
 export class ListingService {
+  static async getSuggestions(query: string): Promise<SearchSuggestion[]> {
+    return apiClient.get<SearchSuggestion[]>("/search/suggestions", { q: query });
+  }
   static async createListing(
     data: CreateListingPayload
   ): Promise<ListingDetail> {

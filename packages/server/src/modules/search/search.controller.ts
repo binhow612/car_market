@@ -30,6 +30,11 @@ export class SearchController {
     );
   }
 
+  @Get('suggestions')
+  async getSuggestions(@Query('q') query: string) {
+    return this.searchService.getSuggestions(query);
+  }
+
   @Get()
   async search(
     @Query(
