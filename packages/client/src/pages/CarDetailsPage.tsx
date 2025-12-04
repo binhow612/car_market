@@ -395,7 +395,9 @@ export function CarDetailsPage() {
     </div>
   );
 
-  const formatFeatureName = (feature: string): string => {
+  const formatFeatureName = (feature: string | null | undefined): string => {
+    if (!feature) return ""; // <-- Thêm dòng này để chặn lỗi null
+
     // Remove curly braces if present
     let formatted = feature.replace(/[{}]/g, '');
     // Replace underscores with spaces
@@ -610,15 +612,14 @@ export function CarDetailsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {listing.carDetail.features.map((feature, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center p-2 bg-gray-50 rounded-lg"
-                      >
-                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                        <span className="text-sm">{formatFeatureName(feature)}</span>
-                      </div>
-                    ))}
+                    {listing.carDetail.features
+                      .filter((f) => f) // <-- Chỉ lấy các feature có giá trị (không null/undefined/rỗng)
+                      .map((feature, index) => (
+                        <div key={index} className="flex items-center p-2 bg-gray-50 rounded-lg">
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                          <span className="text-sm">{formatFeatureName(feature)}</span>
+                        </div>
+                      ))}
                   </div>
                 </CardContent>
               </Card>
