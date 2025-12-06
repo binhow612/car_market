@@ -141,3 +141,8 @@ docker-data/
 
 # ChromaDB local storage
 chroma_data/
+
+# generate_uml
+uml-generation/
+*.pu
+out/
