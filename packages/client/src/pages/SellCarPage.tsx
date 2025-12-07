@@ -23,6 +23,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "../components/ui/Card";
 import { ListingService } from "../services/listing.service";
 import { useMetadata } from "../services/metadata.service";

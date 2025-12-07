@@ -112,7 +112,7 @@ export function LocationPicker({
 
     try {
       setIsReverseGeocoding(true);
-      const result = await apiClient.get('/geocoding/reverse', {
+      const result: any = await apiClient.get('/geocoding/reverse', {
         lat: lat.toString(),
         lng: lng.toString(),
       });
@@ -148,7 +148,7 @@ export function LocationPicker({
 
     try {
       setIsGeocoding(true);
-      const result = await apiClient.get('/geocoding/geocode', {
+      const result: any = await apiClient.get('/geocoding/geocode', {
         address: address.trim(),
       });
       setSelectedLat(result.latitude);

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationBell } from '../NotificationBell';
+import { NotificationProvider } from '../../contexts/NotificationContext';
 
 // Mock useNotifications hook
 const mockUseNotifications = vi.fn();

@@ -17,7 +17,7 @@ export interface ValuationResponse {
   mae_estimate?: number;
 }
 
-export type { ValuationRequest, ValuationResponse };
+// export type { ValuationRequest, ValuationResponse };
 
 export const ValuationService = {
   estimatePrice: async (payload: ValuationRequest): Promise<ValuationResponse> => {
