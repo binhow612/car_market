@@ -60,7 +60,7 @@ COPY packages/server/package*.json ./packages/server/
 RUN npm ci --production
 
 # Copy built application
-COPY --from=builder /app/packages/server/dist ./packages/server/dist
+COPY --from=builder /app/packages/server/dist ./dist
 
 # [QUAN TRỌNG] Copy thư mục init-scripts để script có thể đọc file .sql
 COPY --from=builder /app/init-scripts /app/init-scripts
