@@ -956,13 +956,7 @@ export function HomePage() {
                   multiple={false}
                 />
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
+              
             </div>
           </div>
 

@@ -66,7 +66,7 @@ class SocketService {
 
     // Connect to chat namespace
     if (!this.socket?.connected) {
-      this.socket = io("${SOCKET_URL}/chat", {
+      this.socket = io(`${SOCKET_URL}/chat`, {
         query: { token },
         transports: ["websocket"],
         reconnection: true,
@@ -79,7 +79,7 @@ class SocketService {
 
     // Connect to comments namespace
     if (!this.commentsSocket?.connected) {
-      this.commentsSocket = io("${SOCKET_URL}/comments", {
+      this.commentsSocket = io(`${SOCKET_URL}/comments`, {
         query: { token },
         transports: ["websocket"],
         reconnection: true,
@@ -323,7 +323,7 @@ class SocketService {
     const namespace = 'notifications';
     this.connectionState.set(namespace, 'connecting');
     
-    this.notificationsSocket = io("${SOCKET_URL}/notifications", {
+    this.notificationsSocket = io(`${SOCKET_URL}/notifications`, {
       query: { token },
       transports: ["websocket"],
       reconnection: false, // We handle reconnection manually

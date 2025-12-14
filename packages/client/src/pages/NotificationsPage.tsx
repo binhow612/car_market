@@ -180,16 +180,24 @@ export function NotificationsPage() {
             >
               Unread
             </Button>
-            <Button
-              variant={filter === NotificationType.LISTING_APPROVED ? "default" : "outline"}
-              size="sm"
-              onClick={() => {
+           <Button
+            // Logic hiển thị màu: Nếu đang chọn thì 'default' (đen), không thì 'outline' (trắng/không màu)
+            className={filter === NotificationType.LISTING_APPROVED ? "bg-black text-white hover:bg-gray-800" : ""}
+            size="sm"
+            onClick={() => {
+              // Logic toggle (Bật/Tắt)
+              if (filter === NotificationType.LISTING_APPROVED) {
+                setFilter(null); // Hoặc giá trị mặc định khi không filter (ví dụ: 'ALL')
+              } else {
                 setFilter(NotificationType.LISTING_APPROVED);
-                setPagination({ ...pagination, page: 1 });
-              }}
-            >
-              Approved
-            </Button>
+              }
+              
+              // Reset lại trang về 1 khi đổi filter
+              setPagination({ ...pagination, page: 1 });
+            }}
+          >
+            Approved
+          </Button>
             <Button
               variant={filter === NotificationType.NEW_MESSAGE ? "default" : "outline"}
               size="sm"
