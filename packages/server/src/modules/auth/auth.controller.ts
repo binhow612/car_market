@@ -8,7 +8,6 @@ import {
   Get,
   Request,
   Res,
-  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
@@ -27,8 +26,6 @@ import { LogCategory } from '../../entities/activity-log.entity';
 
 @Controller('auth')
 export class AuthController {
-  private readonly logger = new Logger(AuthController.name);
-
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
@@ -144,15 +141,10 @@ export class AuthController {
     try {
       // Check if user was authenticated by the guard
       if (!req.user) {
-        this.logger.warn('Google OAuth callback: No user in request');
-        
         // Check if there's an error in query params from Google
         const error = req.query.error;
-        const errorDescription = req.query.error_description;
         
         if (error) {
-          this.logger.error(`Google OAuth error from callback: ${error} - ${errorDescription || 'No description'}`);
-          
           // Provide more specific error messages
           let userMessage = 'OAuth authentication failed. Please try again.';
           if (error === 'access_denied') {
@@ -175,7 +167,6 @@ export class AuthController {
 
       // Validate that user object has required fields
       if (!req.user.providerId || !req.user.email) {
-        this.logger.warn('Google OAuth callback: Invalid user data', { user: req.user });
         redirectUrl.searchParams.set('error', 'oauth_failed');
         redirectUrl.searchParams.set('message', 'Invalid OAuth user data. Please try again.');
         return res.redirect(redirectUrl.toString());
@@ -188,9 +179,6 @@ export class AuthController {
       redirectUrl.searchParams.set('success', 'true');
       return res.redirect(redirectUrl.toString());
     } catch (error: any) {
-      // Log the error for debugging
-      this.logger.error('Google OAuth callback error:', error);
-      
       // Redirect to frontend with error
       redirectUrl.searchParams.set('error', 'oauth_failed');
       redirectUrl.searchParams.set('message', error?.message || 'OAuth authentication failed. Please try again.');

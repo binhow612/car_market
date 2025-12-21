@@ -1,13 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
-// Removed unused AuthService import
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-  private readonly logger = new Logger(GoogleStrategy.name);
-
   constructor(
     configService: ConfigService,
   ) {
@@ -28,18 +25,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       callbackURL,
       scope: ['email', 'profile'],
     } as const);
-    
-    // Log configuration for debugging (without exposing secrets) - after super()
-    this.logger.log(`Google OAuth configured with callback URL: ${callbackURL}`);
-    this.logger.log(`Google OAuth Client ID: ${clientID ? `${clientID.substring(0, 10)}...` : 'NOT SET'}`);
-    
-    if (!clientID || !clientSecret) {
-      this.logger.error('Google OAuth credentials are missing!');
-    }
-    
-    if (!callbackURL) {
-      this.logger.error('Google OAuth callback URL is not set!');
-    }
   }
 
   async validate(
@@ -74,8 +59,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
       done(null, user);
     } catch (error) {
-      // Log error for debugging but don't throw
-      this.logger.error('Validation error:', error);
       // Pass false instead of undefined to prevent Passport from throwing
       done(null, false);
     }
