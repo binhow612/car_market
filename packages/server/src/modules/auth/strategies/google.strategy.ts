@@ -35,13 +35,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     try {
       const { id, name, emails, photos } = profile;
       
-      // Validate required fields
-      if (!id) {
-        return done(new Error('Google profile missing ID'));
-      }
-      
-      if (!emails || !emails[0] || !emails[0].value) {
-        return done(new Error('Google profile missing email'));
+      // Validate required fields - if missing, pass undefined instead of error
+      // This prevents Passport from throwing UnauthorizedException
+      if (!id || !emails || !emails[0] || !emails[0].value) {
+        return done(null, undefined);
       }
       
       const user = {
@@ -55,7 +52,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
       done(null, user);
     } catch (error) {
-      done(error);
+      // Pass undefined instead of error to prevent exception
+      done(null, undefined);
     }
   }
 }

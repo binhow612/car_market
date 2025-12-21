@@ -3,25 +3,25 @@ import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
 export class GoogleAuthGuard extends AuthGuard('google') {
-  override handleRequest(err: any, user: any, _info: any, _context: ExecutionContext) {
-    // Always allow request to proceed, even if authentication fails
-    // The callback handler will check req.user and handle errors appropriately
-    if (err || !user) {
-      return null;
+  // Override to prevent exceptions from being thrown
+  override async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    
+    try {
+      // Try to authenticate
+      const result = await super.canActivate(context) as boolean;
+      return result;
+    } catch (error) {
+      // If authentication fails, set user to null and allow request to proceed
+      request.user = null;
+      return true;
     }
-    return user;
   }
 
-  override async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Always allow the request to proceed to the controller
-    // The controller will handle authentication success/failure
-    try {
-      await super.canActivate(context);
-    } catch (error) {
-      // If authentication fails, set user to null and continue
-      const request = context.switchToHttp().getRequest();
-      request.user = null;
-    }
-    return true;
+  // Override handleRequest to always allow request to proceed
+  override handleRequest(err: any, user: any, _info: any, _context: ExecutionContext) {
+    // Always return user (or null) without throwing
+    // The controller will handle the case when user is null
+    return err ? null : user;
   }
 }
