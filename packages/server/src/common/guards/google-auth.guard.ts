@@ -9,6 +9,13 @@ export class GoogleAuthGuard extends AuthGuard('google') {
   override async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     
+    // Log request details for debugging callback URL issues
+    if (request.url?.includes('/google/callback')) {
+      this.logger.log(`Google OAuth callback received: ${request.url}`);
+      this.logger.log(`Query params: ${JSON.stringify(request.query)}`);
+      this.logger.log(`Full URL: ${request.protocol}://${request.get('host')}${request.originalUrl}`);
+    }
+    
     try {
       // Try to authenticate
       const result = await super.canActivate(context) as boolean;
@@ -47,11 +54,26 @@ export class GoogleAuthGuard extends AuthGuard('google') {
       // Log specific error messages for common issues
       if (err.code === 'invalid_client') {
         this.logger.error(
-          'Invalid client error - Check: 1) Client ID/Secret are correct, 2) Callback URL matches Google Console config'
+          'Invalid client error - This usually means:'
+        );
+        this.logger.error(
+          '1) Client ID or Client Secret is incorrect'
+        );
+        this.logger.error(
+          '2) Callback URL in environment variable does not match Google Console'
+        );
+        this.logger.error(
+          '3) OAuth credentials are for a different project/environment'
+        );
+        this.logger.error(
+          'Please verify GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_CALLBACK_URL match your Google Cloud Console OAuth 2.0 configuration'
         );
       } else if (err.code === 'redirect_uri_mismatch') {
         this.logger.error(
-          'Redirect URI mismatch - Callback URL in code does not match Google Console configuration'
+          'Redirect URI mismatch - The callback URL used in the request does not match any authorized redirect URI in Google Console'
+        );
+        this.logger.error(
+          'Make sure the exact callback URL (including /api/ prefix if used) is added to Authorized redirect URIs in Google Console'
         );
       }
       
