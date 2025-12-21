@@ -8,6 +8,7 @@ import {
   Get,
   Request,
   Res,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
@@ -26,6 +27,8 @@ import { LogCategory } from '../../entities/activity-log.entity';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
@@ -138,24 +141,36 @@ export class AuthController {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
     const redirectUrl = new URL(`${frontendUrl}/auth/callback`);
     
-    // Check if user was authenticated by the guard
-    if (!req.user) {
-      redirectUrl.searchParams.set('error', 'oauth_failed');
-      redirectUrl.searchParams.set('message', 'OAuth authentication failed');
-      return res.redirect(redirectUrl.toString());
-    }
-
     try {
+      // Check if user was authenticated by the guard
+      if (!req.user) {
+        this.logger.warn('Google OAuth callback: No user in request');
+        redirectUrl.searchParams.set('error', 'oauth_failed');
+        redirectUrl.searchParams.set('message', 'OAuth authentication failed. Please try again.');
+        return res.redirect(redirectUrl.toString());
+      }
+
+      // Validate that user object has required fields
+      if (!req.user.providerId || !req.user.email) {
+        this.logger.warn('Google OAuth callback: Invalid user data', { user: req.user });
+        redirectUrl.searchParams.set('error', 'oauth_failed');
+        redirectUrl.searchParams.set('message', 'Invalid OAuth user data. Please try again.');
+        return res.redirect(redirectUrl.toString());
+      }
+
       const authResponse = await this.authService.validateOAuthUser(req.user, OAuthProvider.GOOGLE);
       
       // Redirect to frontend with tokens as query params
       redirectUrl.searchParams.set('token', authResponse.accessToken);
       redirectUrl.searchParams.set('success', 'true');
       return res.redirect(redirectUrl.toString());
-    } catch (error) {
+    } catch (error: any) {
+      // Log the error for debugging
+      this.logger.error('Google OAuth callback error:', error);
+      
       // Redirect to frontend with error
       redirectUrl.searchParams.set('error', 'oauth_failed');
-      redirectUrl.searchParams.set('message', error.message || 'OAuth authentication failed');
+      redirectUrl.searchParams.set('message', error?.message || 'OAuth authentication failed. Please try again.');
       return res.redirect(redirectUrl.toString());
     }
   }

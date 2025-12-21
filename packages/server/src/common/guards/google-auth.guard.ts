@@ -1,8 +1,10 @@
-import { ExecutionContext, Injectable } from '@nestjs/common';
+import { ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
 export class GoogleAuthGuard extends AuthGuard('google') {
+  private readonly logger = new Logger(GoogleAuthGuard.name);
+
   // Override to prevent exceptions from being thrown
   override async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -11,17 +13,32 @@ export class GoogleAuthGuard extends AuthGuard('google') {
       // Try to authenticate
       const result = await super.canActivate(context) as boolean;
       return result;
-    } catch (error) {
+    } catch (error: any) {
+      // Log the error for debugging
+      this.logger.error('Google OAuth authentication failed:', error?.message || error);
+      
       // If authentication fails, set user to null and allow request to proceed
+      // This allows the controller to handle the error gracefully
       request.user = null;
-      return true;
+      return true; // Always return true to allow request to proceed to controller
     }
   }
 
   // Override handleRequest to always allow request to proceed
-  override handleRequest(err: any, user: any, _info: any, _context: ExecutionContext) {
-    // Always return user (or null) without throwing
-    // The controller will handle the case when user is null
-    return err ? null : user;
+  // This is called by Passport after strategy validation
+  override handleRequest(err: any, user: any, info: any, _context: ExecutionContext) {
+    // If there's an error or no user, log it but don't throw
+    if (err) {
+      this.logger.error('Google OAuth error in handleRequest:', err);
+      return null;
+    }
+    
+    if (!user) {
+      this.logger.warn('Google OAuth validation returned no user', info ? { info } : '');
+      return null;
+    }
+    
+    // Return user if validation succeeded
+    return user;
   }
 }

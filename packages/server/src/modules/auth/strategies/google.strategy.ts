@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
@@ -6,6 +6,8 @@ import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+  private readonly logger = new Logger(GoogleStrategy.name);
+
   constructor(
     configService: ConfigService,
   ) {
@@ -33,12 +35,18 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<any> {
     try {
+      // Handle case where profile might be null or undefined
+      if (!profile) {
+        return done(null, false);
+      }
+
       const { id, name, emails, photos } = profile;
       
-      // Validate required fields - if missing, pass undefined instead of error
-      // This prevents Passport from throwing UnauthorizedException
+      // Validate required fields - if missing, pass false instead of undefined
+      // Passport treats false differently than undefined - false explicitly denies auth
+      // but won't throw UnauthorizedException if guard handles it properly
       if (!id || !emails || !emails[0] || !emails[0].value) {
-        return done(null, undefined);
+        return done(null, false);
       }
       
       const user = {
@@ -52,8 +60,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
       done(null, user);
     } catch (error) {
-      // Pass undefined instead of error to prevent exception
-      done(null, undefined);
+      // Log error for debugging but don't throw
+      this.logger.error('Validation error:', error);
+      // Pass false instead of undefined to prevent Passport from throwing
+      done(null, false);
     }
   }
 }
