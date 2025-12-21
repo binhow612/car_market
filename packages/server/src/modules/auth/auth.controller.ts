@@ -134,22 +134,29 @@ export class AuthController {
     description: 'User logged in via Google OAuth',
   })
   async googleAuthCallback(@Request() req: any, @Res() res: any) {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
+    
     try {
+      // Check if user was authenticated by the guard
+      if (!req.user) {
+        throw new Error('OAuth authentication failed: User profile not received');
+      }
+
       const authResponse = await this.authService.validateOAuthUser(req.user, OAuthProvider.GOOGLE);
       
       // Redirect to frontend with tokens as query params
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
       const redirectUrl = new URL(`${frontendUrl}/auth/callback`);
       redirectUrl.searchParams.set('token', authResponse.accessToken);
       redirectUrl.searchParams.set('success', 'true');
       
       res.redirect(redirectUrl.toString());
     } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      
       // Redirect to frontend with error
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
       const redirectUrl = new URL(`${frontendUrl}/auth/callback`);
       redirectUrl.searchParams.set('error', 'oauth_failed');
-      redirectUrl.searchParams.set('message', error.message);
+      redirectUrl.searchParams.set('message', error.message || 'OAuth authentication failed');
       
       res.redirect(redirectUrl.toString());
     }

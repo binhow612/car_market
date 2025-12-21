@@ -32,17 +32,30 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: any,
     done: VerifyCallback,
   ): Promise<any> {
-    const { id, name, emails, photos } = profile;
-    
-    const user = {
-      providerId: id,
-      email: emails[0].value,
-      firstName: name.givenName,
-      lastName: name.familyName,
-      profileImage: photos[0]?.value,
-      provider: 'google',
-    };
+    try {
+      const { id, name, emails, photos } = profile;
+      
+      // Validate required fields
+      if (!id) {
+        return done(new Error('Google profile missing ID'));
+      }
+      
+      if (!emails || !emails[0] || !emails[0].value) {
+        return done(new Error('Google profile missing email'));
+      }
+      
+      const user = {
+        providerId: id,
+        email: emails[0].value,
+        firstName: name?.givenName || '',
+        lastName: name?.familyName || '',
+        profileImage: photos?.[0]?.value || null,
+        provider: 'google',
+      };
 
-    done(null, user);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
   }
 }
