@@ -37,29 +37,30 @@ export class PayOSService {
   private readonly apiUrl: string;
   private readonly returnUrl: string;
   private readonly cancelUrl: string;
-  private readonly environment: string; // 'sandbox' or 'production'
 
   constructor(private configService: ConfigService) {
     this.clientId = this.configService.get<string>('PAYOS_CLIENT_ID', '');
     this.apiKey = this.configService.get<string>('PAYOS_API_KEY', '');
     this.checksumKey = this.configService.get<string>('PAYOS_CHECKSUM_KEY', '');
-    this.environment = this.configService.get<string>('PAYOS_ENVIRONMENT', 'sandbox');
     
-    // PayOS API URLs
-    if (this.environment === 'sandbox') {
-      this.apiUrl = 'https://api-merchant.payos.vn/v2/payment-requests';
-    } else {
-      this.apiUrl = 'https://api-merchant.payos.vn/v2/payment-requests';
-    }
+    // PayOS API URLs (same for both sandbox and production)
+    this.apiUrl = 'https://api-merchant.payos.vn/v2/payment-requests';
     
+    // Get frontend URL for dynamic callback URLs
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
+    
+    // Use PAYOS_RETURN_URL if specified, otherwise construct from FRONTEND_URL
+    const defaultReturnUrl = `${frontendUrl}/promotions/payos-callback`;
     this.returnUrl = this.configService.get<string>(
       'PAYOS_RETURN_URL',
-      'http://localhost:5173/promotions/payos-callback',
+      defaultReturnUrl,
     );
     
+    // Use PAYOS_CANCEL_URL if specified, otherwise construct from FRONTEND_URL
+    const defaultCancelUrl = `${frontendUrl}/promotions/payos-callback?status=cancelled`;
     this.cancelUrl = this.configService.get<string>(
       'PAYOS_CANCEL_URL',
-      'http://localhost:5173/promotions/payos-callback?status=cancelled',
+      defaultCancelUrl,
     );
   }
 

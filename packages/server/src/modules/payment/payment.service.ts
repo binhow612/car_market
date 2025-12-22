@@ -39,9 +39,12 @@ export class PaymentService {
     }
 
     const orderInfo = `Promote listing: ${promotion.listing?.title || promotion.id}`;
+    // Get frontend URL for dynamic callback URLs
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
+    const defaultReturnUrl = `${frontendUrl}/promotions/payos-callback`;
     const returnUrl = this.configService.get<string>(
       'PAYOS_RETURN_URL',
-      'http://localhost:5173/promotions/payos-callback',
+      defaultReturnUrl,
     );
     
     // Generate orderCode for PayOS (PayOS requires numeric orderCode)
