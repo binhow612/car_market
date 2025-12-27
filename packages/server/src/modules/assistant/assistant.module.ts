@@ -23,6 +23,8 @@ import { FAQ } from '../../entities/faq.entity';
 import { ChatbotConversation } from '../../entities/chatbot-conversation.entity';
 import { ChatbotMessage } from '../../entities/chatbot-message.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ValuationModule } from '../valuation/valuation.module';
+import { MetadataModule } from '../metadata/metadata.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
       ChatbotMessage,
     ]),
     NotificationsModule,
+    ValuationModule,
+    MetadataModule,
   ],
   controllers: [AssistantController],
   providers: [

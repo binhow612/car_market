@@ -4,6 +4,7 @@ export enum UserIntent {
   FAQ = 'faq',
   CAR_COMPARE = 'car_compare',
   USER_INFO = 'user_info',
+  CAR_VALUATION = 'car_valuation',
 }
 
 export interface MessageAction {

@@ -307,6 +307,7 @@ export const AssistantProvider = ({ children }: AssistantProviderProps) => {
         timestamp: new Date(),
         type: response.actions ? "action" : "text",
         actions: response.actions,
+        data: response.data, // Include data from response
       };
 
       // Update state with assistant message

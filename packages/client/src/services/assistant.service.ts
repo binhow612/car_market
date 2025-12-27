@@ -9,7 +9,7 @@ export interface AssistantQueryRequest {
 }
 
 export interface AssistantQueryResponse {
-  intent: "car_specs" | "car_listing" | "faq" | "car_compare" | "user_info" | null;
+  intent: "car_specs" | "car_listing" | "faq" | "car_compare" | "user_info" | "car_valuation" | null;
   message: string;
   conversationId?: string;
   data?: any; // Can be CarComparisonData for car_compare intent

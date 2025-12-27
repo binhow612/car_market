@@ -5,6 +5,7 @@ export interface Message {
   timestamp: Date;
   type?: "text" | "action" | "suggestion";
   actions?: MessageAction[];
+  data?: any; // For custom data like valuation_form, car_comparison, etc.
 }
 
 export interface MessageAction {

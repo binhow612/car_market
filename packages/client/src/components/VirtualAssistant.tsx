@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAssistant } from "../contexts/AssistantContext";
 import type { MessageAction } from "../types/assistant.types";
+import { ValuationForm } from "./ValuationForm";
 
 const SERVER_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
 
@@ -197,6 +198,11 @@ export function VirtualAssistant() {
                   <p className="text-sm whitespace-pre-wrap break-words">
                     {message.content}
                   </p>
+                  
+                  {/* Valuation Form */}
+                  {message.data?.type === "valuation_form" && (
+                    <ValuationForm initialMakes={message.data.makes || []} />
+                  )}
                   
                   {/* Action Buttons & Listing Cards */}
                   {message.actions && message.actions.length > 0 && (

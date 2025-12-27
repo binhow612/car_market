@@ -15,6 +15,7 @@ import { ListingQueryBuilderService } from './listing-query-builder.service';
 import { UserContextService } from './user-context.service';
 import { CarComparisonService } from './car-comparison.service';
 import { FAQRAGService } from './faq-rag.service';
+import { MetadataService } from '../../metadata/metadata.service';
 import { User } from '../../../entities/user.entity';
 
 @Injectable()
@@ -30,6 +31,7 @@ export class ResponseHandlerService {
     private readonly userContextService: UserContextService,
     private readonly carComparisonService: CarComparisonService,
     private readonly faqRAGService: FAQRAGService,
+    private readonly metadataService: MetadataService,
   ) {
     const apiKey = process.env.OPENAI_API_KEY;
     this.openai = new OpenAI({
@@ -54,6 +56,8 @@ export class ResponseHandlerService {
         return this.handleCarCompare(userQuery, extractedEntities);
       case UserIntent.USER_INFO:
         return this.handleUserInfo(userQuery, currentUser);
+      case UserIntent.CAR_VALUATION:
+        return this.handleCarValuation();
       default:
         return this.handleFAQ(userQuery);
     }
@@ -1230,6 +1234,39 @@ Guidelines:
     });
 
     return suggestions.slice(0, 4); // Limit to 4 suggestions
+  }
+
+  private async handleCarValuation(): Promise<AssistantResponseDto> {
+    try {
+      // Get available makes for valuation
+      const makes = await this.metadataService.getValuationMakes();
+
+      return {
+        intent: UserIntent.CAR_VALUATION,
+        message:
+          'Tôi sẽ giúp bạn định giá xe. Vui lòng điền thông tin bên dưới để nhận được ước tính giá chính xác nhất.',
+        data: {
+          type: 'valuation_form',
+          makes, // Provide makes so client can start loading
+        },
+        suggestions: [
+          {
+            id: '1',
+            label: 'Xem xe có sẵn',
+            query: 'What cars do you have available?',
+            icon: '🚗',
+          },
+        ],
+      };
+    } catch (error) {
+      this.logger.error('Error handling car valuation:', error);
+      return {
+        intent: UserIntent.CAR_VALUATION,
+        message:
+          'Xin lỗi, tôi đang gặp vấn đề khi tải form định giá. Vui lòng thử lại sau hoặc truy cập trang định giá trực tiếp.',
+        suggestions: [],
+      };
+    }
   }
 }
 
