@@ -2,10 +2,10 @@ requests
 beautifulsoup4
 pandas
 numpy
-scikit-learn
+scikit-learn==1.7.1
 joblib
 fastapi
 uvicorn
 pydantic
-
+xgboost
 
