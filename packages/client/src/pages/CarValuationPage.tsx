@@ -194,8 +194,8 @@ export const CarValuationPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-4">Used Car Valuation</h1>
       <p className="text-sm text-gray-600 mb-6">
-        Enter car information to get a price estimate based on our Machine Learning model (Random Forest). 
-        The model was trained on data from bonbanh.com and oto.com.vn with an accuracy of R² = 0.959.
+        Enter car information to get a price estimate based on our Machine Learning model (XGBoost). 
+        The model was trained on data from bonbanh.com and oto.com.vn with an accuracy of R² = 0.989.
       </p>
 
       <form onSubmit={handleSubmit} className="grid gap-4 max-w-xl">

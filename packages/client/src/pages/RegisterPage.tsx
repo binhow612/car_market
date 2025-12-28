@@ -249,7 +249,8 @@ export function RegisterPage() {
                     I want to sell cars on CarMarket
                   </label>
                   <p className="text-gray-500 mt-1">
-                    Check this box if you plan to list cars for sale. You can always upgrade later.
+                    Check this box if you plan to list cars for sale. You can
+                    always upgrade later.
                   </p>
                 </div>
               </div>
@@ -275,12 +276,14 @@ export function RegisterPage() {
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="mt-6">
                 <Button
                   type="button"
                   variant="outline"
                   className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  onClick={() => window.location.href = `${SOCKET_URL}/api/auth/google`}
+                  onClick={() =>
+                    (window.location.href = `${SOCKET_URL}/api/auth/google`)
+                  }
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
@@ -301,18 +304,6 @@ export function RegisterPage() {
                     />
                   </svg>
                   Google
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  onClick={() => window.location.href = `${SOCKET_URL}/api/auth/facebook`}
-                >
-                  <svg className="w-5 h-5 mr-2" fill="#1877F2" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                  Facebook
                 </Button>
               </div>
             </div>
