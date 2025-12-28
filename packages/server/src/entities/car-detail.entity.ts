@@ -121,7 +121,8 @@ export class CarDetail {
   @Column('text', { nullable: true })
   description!: string | null;
 
-  @Column('simple-array', { nullable: true })
+// Thay đổi từ 'simple-array' sang 'text' với tùy chọn array: true
+  @Column('text', { array: true, nullable: true })
   features!: string[] | null; // e.g., ['GPS', 'Leather seats', 'Sunroof']
 
   @CreateDateColumn()
