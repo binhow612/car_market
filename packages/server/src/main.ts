@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
@@ -9,8 +9,12 @@ import { LoggingExceptionFilter } from './common/filters/logging-exception.filte
 import { LogsService } from './modules/logs/logs.service';
 import { MonitoringInterceptor } from './modules/monitoring/monitoring.interceptor';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { exec } from 'child_process'; // <--- 1. Thêm thư viện để chạy lệnh shell
 
 async function bootstrap() {
+  // <--- 2. Khởi tạo Logger để in log đẹp hơn
+  const logger = new Logger('Bootstrap'); 
+  
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3000);
@@ -35,7 +39,7 @@ async function bootstrap() {
     ? [...defaultOrigins, frontendUrl, 'https://carmarket-six.vercel.app'] // Thêm cứng domain vercel để chắc chắn
     : defaultOrigins;
   
-  console.log('🌍 CORS Allowed Origins:', allowedOrigins);
+  logger.log(`🌍 CORS Allowed Origins: ${allowedOrigins.join(', ')}`);
   
   app.enableCors({
     origin: allowedOrigins,
@@ -86,17 +90,37 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  //const port = configService.get<number>('PORT', 3000);
-
   app.enableShutdownHooks();
 
   // Start the NestJS application
   await app.listen(port);
   
-  // console.log(`🚀 Server running on http://localhost:${port}`);
-  // console.log(`📘 Swagger docs on http://localhost:${port}/api/docs`);
-  console.log(`🚀 Server running on ${backendUrl}`);
-  console.log(`📘 Swagger docs on ${backendUrl}/api/docs`);
-  console.log(`🔌 Socket.IO server running on /chat namespace`);
+  logger.log(`🚀 Server running on ${backendUrl}`);
+  logger.log(`📘 Swagger docs on ${backendUrl}/api/docs`);
+  logger.log(`🔌 Socket.IO server running on /chat namespace`);
+
+  // ============================================================
+  // <--- 3. GIẢI PHÁP CỨU NGUY: Tự động chạy script khi Server đã lên
+  // ============================================================
+  if (process.env.NODE_ENV === 'production') {
+    logger.log('🚀 PROD DETECTED: Triggering Auto-Seeding Process in background...');
+    
+    // Chạy lệnh node script ngầm bên trong server
+    // Lưu ý: Đường dẫn dist/scripts/... là chuẩn khi build xong
+    const scriptCmd = 'node dist/scripts/sync-faqs.js && node dist/scripts/regenerate-faq-embeddings.js';
+    
+    exec(scriptCmd, (error, stdout, stderr) => {
+      if (error) {
+        logger.error(`❌ Seeding Error: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        // Một số thư viện dùng stderr để log info, nên dùng warn thay vì error
+        logger.warn(`⚠️ Seeding Info/Stderr: ${stderr}`);
+      }
+      logger.log(`✅ Seeding Output:\n${stdout}`);
+    });
+  }
+  // ============================================================
 }
 void bootstrap();
