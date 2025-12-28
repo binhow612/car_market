@@ -57,7 +57,7 @@ export const SearchFiltersPanel = React.memo(function SearchFiltersPanel({
             <Button
               onClick={onApplyFilters}
               size="sm"
-              className="text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg border-0"
+              className="text-xs bg-black hover:bg-gray-700 text-white shadow-md hover:shadow-lg border-0"
             >
               Apply
             </Button>

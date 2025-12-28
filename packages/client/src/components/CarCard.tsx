@@ -332,12 +332,12 @@ export function CarCard({
                   variant="outline"
                   onClick={handleToggleFavorite}
                   disabled={isLoading}
-                  className={`flex-1 ${isFavorite ? "text-red-500 border-red-500 hover:bg-red-50" : ""}`}
+                  className={`flex-1 ${isFavorite ? "text-red-500 border-red-500 hover:bg-red-50" : "hover:text-red-500 hover:bg-red-50"}`}
                   title={isFavorite ? "Remove from favorites" : "Save to favorites"}
                 >
                   <Heart
                     className={`w-4 h-4 ${!compact ? "mr-1" : ""} ${
-                      isFavorite ? "fill-current text-red-500" : "text-gray-400"
+                      isFavorite ? "fill-current text-red-500" : "text-red-400"
                     }`}
                   />
                   {!compact && (isFavorite ? "Remove" : "Save")}
