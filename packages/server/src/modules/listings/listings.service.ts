@@ -217,6 +217,16 @@ export class ListingsService {
   ): Promise<ListingDetail> {
     const { carDetail, images, videos, ...listingData } = createListingDto;
 
+    // Ensure features is always an array (handle case where it might be a string)
+    if (carDetail.features) {
+      const featuresValue: any = carDetail.features;
+      if (typeof featuresValue === 'string') {
+        carDetail.features = featuresValue.split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0);
+      } else if (!Array.isArray(featuresValue)) {
+        carDetail.features = [];
+      }
+    }
+
     // Create car detail
     const newCarDetail = this.carDetailRepository.create(carDetail);
     const savedCarDetail = await this.carDetailRepository.save(newCarDetail);
@@ -558,6 +568,16 @@ export class ListingsService {
     }
 
     const { carDetail, images, videos, ...listingData } = updateListingDto;
+
+    // Ensure features is always an array (handle case where it might be a string)
+    if (carDetail?.features) {
+      const featuresValue: any = carDetail.features;
+      if (typeof featuresValue === 'string') {
+        carDetail.features = featuresValue.split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0);
+      } else if (!Array.isArray(featuresValue)) {
+        carDetail.features = [];
+      }
+    }
 
     // Store original values for comparison
     const originalValues = {

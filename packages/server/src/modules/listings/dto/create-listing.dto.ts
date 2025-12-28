@@ -33,12 +33,30 @@ export class CreateCarDetailDto {
   @Max(new Date().getFullYear() + 1)
   year!: number;
 
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value.trim().toLowerCase();
+    }
+    return value;
+  })
   @IsEnum(BodyType)
   bodyType!: BodyType;
 
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value.trim().toLowerCase();
+    }
+    return value;
+  })
   @IsEnum(FuelType)
   fuelType!: FuelType;
 
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value.trim().toLowerCase();
+    }
+    return value;
+  })
   @IsEnum(TransmissionType)
   transmission!: TransmissionType;
 
@@ -66,6 +84,12 @@ export class CreateCarDetailDto {
   @IsNumber()
   numberOfSeats?: number;
 
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value.trim().toLowerCase();
+    }
+    return value;
+  })
   @IsEnum(CarCondition)
   condition!: CarCondition;
 
